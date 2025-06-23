@@ -5,6 +5,7 @@ pub mod KibiToken {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
     use openzeppelin::upgrades::UpgradeableComponent;
+    use openzeppelin::upgrades::interface::IUpgradeable;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::{ClassHash, ContractAddress, get_caller_address};
     use crate::interfaces::ikibi_token::IKibiToken;
@@ -70,9 +71,13 @@ pub mod KibiToken {
             self.ownable.assert_only_owner();
             self.puzzle_game.write(puzzle_game);
         }
+    }
 
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             self.ownable.assert_only_owner();
+
             self.upgradeable.upgrade(new_class_hash);
         }
     }

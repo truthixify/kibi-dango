@@ -1,4 +1,4 @@
-use starknet::{ClassHash, ContractAddress};
+use starknet::ContractAddress;
 use crate::enums::puzzle_game_enums::Difficulty;
 
 #[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
