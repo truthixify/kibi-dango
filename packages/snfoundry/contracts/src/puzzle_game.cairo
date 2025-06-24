@@ -32,8 +32,8 @@ pub mod PuzzleGame {
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::{ClassHash, ContractAddress, get_caller_address};
-    use crate::enums::puzzle_game_enums::Difficulty;
     use crate::enums::pirate_nft_enums::Rank;
+    use crate::enums::puzzle_game_enums::Difficulty;
     use crate::events::puzzle_game_events::*;
     use crate::interfaces::ikibi_token::{IKibiTokenDispatcher, IKibiTokenDispatcherTrait};
     use crate::interfaces::ipirate_nft::{IPirateNFTDispatcher, IPirateNFTDispatcherTrait};
@@ -135,7 +135,7 @@ pub mod PuzzleGame {
             };
 
             // Ensure the provided bounty meets the minimum requirement
-            assert(bounty_amount >= min_bounty, 'insufficient_bounty');
+            assert(bounty_amount >= min_bounty, 'insufficient bounty');
 
             // Construct the reward object with bounty and difficulty
             let reward = Reward { bounty_amount, difficulty_level };
@@ -197,6 +197,7 @@ pub mod PuzzleGame {
 
             // Verify the solution by computing the commitment and comparing
             let computed_commitment = poseidon_hash_span(array![solution_letter, salt].span());
+
             assert(computed_commitment == puzzle.solution_commitment, 'incorrect solution');
 
             // For AI puzzles, ensure only the assigned player can solve them
@@ -214,6 +215,7 @@ pub mod PuzzleGame {
             let pirate_nft = IPirateNFTDispatcher { contract_address: self.pirate_nft.read() };
             let token_id = pirate_nft.mint_if_needed(player);
             let weight = get_difficulty_weight(puzzle.reward.difficulty_level);
+            
             pirate_nft.increment_solved_count(token_id, weight);
 
             // Distribute the reward to the player

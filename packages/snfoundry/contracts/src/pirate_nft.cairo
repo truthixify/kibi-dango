@@ -171,7 +171,12 @@ pub mod PirateNFT {
             self
                 .stats
                 .entry(token_id)
-                .write(RankInfo { solved_count: new_solved_count, rank: get_rank_by_solved_count(new_solved_count) });
+                .write(
+                    RankInfo {
+                        solved_count: new_solved_count,
+                        rank: get_rank_by_solved_count(new_solved_count),
+                    },
+                );
         }
 
         // Set the PuzzleGame contract address - only callable by owner

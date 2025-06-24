@@ -2,8 +2,8 @@
 // This file contains comprehensive tests for the Kibi Dango game ecosystem
 use core::felt252_div;
 use core::poseidon::poseidon_hash_span;
-use kibi_dango::enums::puzzle_game_enums::Difficulty;
 use kibi_dango::enums::pirate_nft_enums::Rank;
+use kibi_dango::enums::puzzle_game_enums::Difficulty;
 use kibi_dango::events::puzzle_game_events::{PuzzleCreated, PuzzleSolved};
 use kibi_dango::interfaces::ikibi_token::{IKibiTokenDispatcher, IKibiTokenDispatcherTrait};
 use kibi_dango::interfaces::ipirate_nft::{IPirateNFTDispatcher, IPirateNFTDispatcherTrait};
@@ -595,8 +595,8 @@ fn test_weighted_solved_count_medium_puzzle() {
     };
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
 
     // Create and solve a Medium puzzle (weight = 5)
@@ -671,8 +671,8 @@ fn test_cumulative_weighted_solved_count() {
     };
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
 
     // Define multiple puzzles with different difficulties and their expected weights
@@ -748,8 +748,8 @@ fn test_rank_progression_with_weights() {
     let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
 
     // Get the token ID for USER (will be minted automatically when needed)
@@ -865,8 +865,8 @@ fn test_multiple_players_solving_different_puzzles() {
     let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
 
     // Create multiple puzzles with different difficulties for testing
     let mut puzzles = array![
@@ -945,7 +945,7 @@ fn test_ai_puzzle_reward_rank_multiplier() {
     let ai_secret_1 = 'AI_PUZZLE_1';
     let ai_salt_1: felt252 = 111111;
     let ai_commitment_1 = poseidon_hash_span([ai_secret_1, ai_salt_1].span());
-    let ai_bounty = 1000; 
+    let ai_bounty = 1000;
     let ai_difficulty = Difficulty::AI;
     let ai_puzzle_id_1 = puzzle_game.get_next_puzzle_id();
 
@@ -1005,9 +1005,262 @@ fn test_ai_puzzle_reward_rank_multiplier() {
     let user_balance_before_2 = kibi_token_erc20_dispatcher.balance_of(USER);
 
     puzzle_game.submit_solution(ai_puzzle_id_2, ai_secret_2, ai_salt_2);
-    
+
     let user_balance_after_2 = kibi_token_erc20_dispatcher.balance_of(USER);
-    
+
     // ObedientFighter multiplier = 2, so reward should be 2000
-    assert!(user_balance_before_2 + 2 * ai_bounty == user_balance_after_2, "ObedientFighter should get 2x AI reward");
+    assert!(
+        user_balance_before_2 + 2 * ai_bounty == user_balance_after_2,
+        "ObedientFighter should get 2x AI reward",
+    );
+}
+
+// Test failure scenarios for insufficient bounty when creating puzzles
+// Verifies that puzzles cannot be created with bounty below minimum requirements
+#[test]
+#[should_panic(expected: 'insufficient bounty')]
+fn test_insufficient_bounty_easy() {
+    // Deploy the complete ecosystem
+    let (_, _, puzzle_game) = deploy_puzzle_game();
+
+    // Set up authorization for puzzle creation
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+
+    // Try to create Easy puzzle with insufficient bounty (min is 3000, we use 2000)
+    let puzzle_secret = 'INSUFFICIENT_PUZZLE';
+    let salt: felt252 = 123456;
+    let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
+    let difficulty_level = Difficulty::Easy;
+    let insufficient_bounty = 2000; // Below minimum of 3000
+
+    // This should panic due to insufficient bounty
+    puzzle_game.create_puzzle(solution_commitment, difficulty_level, insufficient_bounty);
+}
+
+// Test failure scenarios for insufficient bounty on Medium puzzles
+#[test]
+#[should_panic(expected: 'insufficient bounty')]
+fn test_insufficient_bounty_medium() {
+    // Deploy the complete ecosystem
+    let (_, _, puzzle_game) = deploy_puzzle_game();
+
+    // Set up authorization for puzzle creation
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+
+    // Try to create Medium puzzle with insufficient bounty (min is 5000, we use 3000)
+    let puzzle_secret = 'INSUFFICIENT_MEDIUM';
+    let salt: felt252 = 234567;
+    let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
+    let difficulty_level = Difficulty::Medium;
+    let insufficient_bounty = 3000; // Below minimum of 5000
+
+    // This should panic due to insufficient bounty
+    puzzle_game.create_puzzle(solution_commitment, difficulty_level, insufficient_bounty);
+}
+
+// Test failure scenarios for insufficient bounty on Hard puzzles
+#[test]
+#[should_panic(expected: 'insufficient bounty')]
+fn test_insufficient_bounty_hard() {
+    // Deploy the complete ecosystem
+    let (_, _, puzzle_game) = deploy_puzzle_game();
+
+    // Set up authorization for puzzle creation
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+
+    // Try to create Hard puzzle with insufficient bounty (min is 7000, we use 5000)
+    let puzzle_secret = 'INSUFFICIENT_HARD';
+    let salt: felt252 = 345678;
+    let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
+    let difficulty_level = Difficulty::Hard;
+    let insufficient_bounty = 5000; // Below minimum of 7000
+
+    // This should panic due to insufficient bounty
+    puzzle_game.create_puzzle(solution_commitment, difficulty_level, insufficient_bounty);
+}
+
+// Test failure scenario for incorrect solution submission
+// Verifies that puzzles cannot be solved with wrong solutions
+#[test]
+#[should_panic(expected: 'incorrect solution')]
+fn test_incorrect_solution() {
+    // Deploy the complete ecosystem
+    let (_, _, puzzle_game) = deploy_puzzle_game();
+
+    // Set up authorization for puzzle creation and solving
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+
+    // Create an AI puzzle
+    let puzzle_secret = 'CORRECT_SECRET';
+    let salt: felt252 = 123456;
+    let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
+    let difficulty_level = Difficulty::AI;
+    let bounty_amount = 1000;
+
+    let puzzle_id = puzzle_game.get_next_puzzle_id();
+    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+
+    // Try to solve with incorrect solution - should panic
+    let wrong_secret = 'WRONG_SECRET';
+    puzzle_game.submit_solution(puzzle_id, wrong_secret, salt);
+}
+
+// Test failure scenario for solving already solved puzzle
+// Verifies that puzzles cannot be solved twice
+#[test]
+#[should_panic(expected: 'already solved')]
+fn test_solve_already_solved_puzzle() {
+    // Deploy the complete ecosystem
+    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+
+    // Set up authorization for puzzle creation and solving
+    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+
+    // Create and solve an AI puzzle
+    let puzzle_secret = 'SOLVE_ONCE';
+    let salt: felt252 = 123456;
+    let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
+    let difficulty_level = Difficulty::AI;
+    let bounty_amount = 1000;
+
+    let puzzle_id = puzzle_game.get_next_puzzle_id();
+    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.submit_solution(puzzle_id, puzzle_secret, salt);
+
+    // Try to solve the same puzzle again - should panic
+    puzzle_game.submit_solution(puzzle_id, puzzle_secret, salt);
+}
+
+// Test failure scenario for wrong player solving AI puzzle
+// Verifies that only assigned players can solve AI puzzles
+#[test]
+#[should_panic(expected: 'not assigned player')]
+fn test_wrong_player_solve_ai_puzzle() {
+    // Deploy the complete ecosystem
+    let (_, _, puzzle_game) = deploy_puzzle_game();
+
+    // Set up authorization for cross-contract calls
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+
+    // Create an AI puzzle (assigned to USER)
+    let puzzle_secret = 'AI_PUZZLE';
+    let salt: felt252 = 123456;
+    let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
+    let difficulty_level = Difficulty::AI;
+    let bounty_amount = 1000;
+
+    let puzzle_id = puzzle_game.get_next_puzzle_id();
+    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+
+    // Try to solve with wrong player (OTHER_USER) - should panic
+    start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+    puzzle_game.submit_solution(puzzle_id, puzzle_secret, salt);
+}
+
+// Test failure scenario for unauthorized NFT minting
+// Verifies that only PuzzleGame can mint NFTs
+#[test]
+#[should_panic(expected: 'not authorized')]
+fn test_unauthorized_nft_mint() {
+    // Deploy the complete ecosystem
+    let (_, pirate_nft, _) = deploy_puzzle_game();
+
+    // Try to mint NFT without being PuzzleGame contract - should panic
+    // Note: We need to cheat the caller to be a different address
+    start_cheat_caller_address(pirate_nft.contract_address, OTHER_USER);
+    pirate_nft.mint_if_needed(USER);
+}
+
+// Test failure scenario for unauthorized solved count increment
+// Verifies that only PuzzleGame can increment solved counts
+#[test]
+#[should_panic(expected: 'not authorized')]
+fn test_unauthorized_solved_count_increment() {
+    // Deploy the complete ecosystem
+    let (_, pirate_nft, puzzle_game) = deploy_puzzle_game();
+
+    // First mint an NFT legitimately
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
+    let token_id = pirate_nft.mint_if_needed(USER);
+
+    // Try to increment solved count without being PuzzleGame contract - should panic
+    start_cheat_caller_address(pirate_nft.contract_address, OTHER_USER);
+    pirate_nft.increment_solved_count(token_id, 3);
+}
+
+// Test failure scenario for unauthorized contract address setting
+// Verifies that only owners can set contract addresses
+#[test]
+#[should_panic(expected: 'Caller is not the owner')]
+fn test_unauthorized_set_puzzle_game() {
+    // Deploy the complete ecosystem
+    let (_, pirate_nft, _) = deploy_puzzle_game();
+
+    // Try to set puzzle game address without being owner - should panic
+    start_cheat_caller_address(pirate_nft.contract_address, OTHER_USER);
+    pirate_nft.set_puzzle_game(OTHER_USER);
+}
+
+// Test failure scenario for unauthorized contract upgrade
+// Verifies that only owners can upgrade contracts
+#[test]
+#[should_panic(expected: 'Caller is not the owner')]
+fn test_unauthorized_upgrade() {
+    // Deploy the complete ecosystem
+    let (kibi_token, _, _) = deploy_puzzle_game();
+
+    // Get a new class hash for upgrade
+    let new_class_hash: ClassHash = *declare("KibiToken").unwrap().contract_class().class_hash;
+
+    // Try to upgrade without being owner - should panic
+    start_cheat_caller_address(kibi_token.contract_address, OTHER_USER);
+    kibi_token.upgrade(new_class_hash);
+}
+
+// Test failure scenario for solving non-existent puzzle
+// Verifies that puzzles with invalid IDs cannot be solved
+#[test]
+#[should_panic(expected: 'incorrect solution')]
+fn test_solve_nonexistent_puzzle() {
+    // Deploy the complete ecosystem
+    let (_, _, puzzle_game) = deploy_puzzle_game();
+
+    // Set up authorization for puzzle solving
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+
+    // Try to solve a puzzle that doesn't exist (ID 999) - should panic
+    // The contract will try to read the puzzle and fail
+    let non_existent_puzzle_id = 999;
+    let puzzle_secret = 'NONEXISTENT';
+    let salt: felt252 = 123456;
+
+    puzzle_game.submit_solution(non_existent_puzzle_id, puzzle_secret, salt);
+}
+
+// Test failure scenario for wrong salt in solution
+// Verifies that solutions must use the correct salt
+#[test]
+#[should_panic(expected: 'incorrect solution')]
+fn test_wrong_salt_solution() {
+    // Deploy the complete ecosystem
+    let (_, _, puzzle_game) = deploy_puzzle_game();
+
+    // Set up authorization for puzzle creation and solving
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+
+    // Create an AI puzzle
+    let puzzle_secret = 'CORRECT_SECRET';
+    let correct_salt: felt252 = 123456;
+    let solution_commitment = poseidon_hash_span([puzzle_secret, correct_salt].span());
+    let difficulty_level = Difficulty::AI;
+    let bounty_amount = 1000;
+
+    let puzzle_id = puzzle_game.get_next_puzzle_id();
+    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+
+    // Try to solve with wrong salt - should panic
+    let wrong_salt: felt252 = 654321;
+    puzzle_game.submit_solution(puzzle_id, puzzle_secret, wrong_salt);
 }
