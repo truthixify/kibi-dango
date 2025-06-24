@@ -1,4 +1,4 @@
-use starknet::ContractAddress;
+use starknet::{ClassHash, ContractAddress};
 use crate::enums::puzzle_game_enums::Difficulty;
 
 #[starknet::interface]
@@ -18,4 +18,6 @@ pub trait IPuzzleGame<TContractState> {
     fn set_kibi_token(ref self: TContractState, kibi_token: ContractAddress);
 
     fn set_pirate_nft(ref self: TContractState, pirate_nft: ContractAddress);
+
+    fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }

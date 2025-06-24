@@ -5,7 +5,6 @@ pub mod PuzzleGame {
     use core::poseidon::poseidon_hash_span;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
-    use openzeppelin::upgrades::interface::IUpgradeable;
     use starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
@@ -158,7 +157,7 @@ pub mod PuzzleGame {
             // Mint Pirate NFT if needed and update solve count
             let pirate_nft = IPirateNFTDispatcher { contract_address: self.pirate_nft.read() };
             let token_id = pirate_nft.mint_if_needed(player);
-            pirate_nft.increment_solve(token_id);
+            pirate_nft.increment_solved_count(token_id);
 
             // Reward player
             let reward = puzzle.reward;
@@ -186,10 +185,7 @@ pub mod PuzzleGame {
             self.ownable.assert_only_owner();
             self.pirate_nft.write(pirate_nft);
         }
-    }
 
-    #[abi(embed_v0)]
-    impl UpgradeableImpl of IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             self.ownable.assert_only_owner();
 

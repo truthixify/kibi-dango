@@ -4,10 +4,9 @@
 pub mod PirateNFT {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::introspection::src5::SRC5Component;
+    use openzeppelin::token::erc721::ERC721Component;
     use openzeppelin::token::erc721::extensions::ERC721EnumerableComponent;
-    use openzeppelin::token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
     use openzeppelin::upgrades::UpgradeableComponent;
-    use openzeppelin::upgrades::interface::IUpgradeable;
     use starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
@@ -54,6 +53,7 @@ pub mod PirateNFT {
         player_token_ids: Map<ContractAddress, u256>,
         stats: Map<u256, RankInfo>,
         puzzle_game: ContractAddress,
+        next_token_id: u256,
     }
 
     #[event]
@@ -82,37 +82,38 @@ pub mod PirateNFT {
         self.erc721.initializer(name, symbol, base_uri);
         self.erc721_enumerable.initializer();
         self.ownable.initializer(owner);
+        self.next_token_id.write(0);
     }
 
     #[abi(embed_v0)]
     impl PirateNFTImpl of IPirateNFT<ContractState> {
         fn mint_if_needed(ref self: ContractState, to: ContractAddress) -> u256 {
             let token_id = self.player_token_ids.entry(to).read();
+            let next_token_id = self.next_token_id.read();
 
-            if self.has_token(to) {
+            if self.erc721.exists(token_id) && self.erc721.owner_of(token_id) == to {
                 return token_id;
             }
 
-            let new_token_id = self.erc721_enumerable.total_supply() + 1;
-            let empty_data: Array<felt252> = array![];
             let default_rank_info: RankInfo = Default::default();
 
-            self.erc721.safe_mint(to, new_token_id, empty_data.span());
-            self.stats.entry(new_token_id).write(default_rank_info);
-            self.player_token_ids.entry(to).write(new_token_id);
+            self.erc721.mint(to, next_token_id);
+            self.stats.entry(next_token_id).write(default_rank_info);
+            self.player_token_ids.entry(to).write(next_token_id);
+            self.next_token_id.write(next_token_id + 1);
 
-            new_token_id
+            next_token_id
         }
 
-        fn increment_solve(ref self: ContractState, token_id: u256) {
+        fn increment_solved_count(ref self: ContractState, token_id: u256) {
             assert(self.puzzle_game.read() == get_caller_address(), 'Not authorized');
 
-            let mut new_solves_count = self.stats.entry(token_id).read().solves_count + 1;
+            let mut new_solved_count = self.stats.entry(token_id).read().solved_count + 1;
 
             self
                 .stats
                 .entry(token_id)
-                .write(RankInfo { solves_count: new_solves_count, rank: self.get_rank(token_id) });
+                .write(RankInfo { solved_count: new_solved_count, rank: self.get_rank(token_id) });
         }
 
         fn set_puzzle_game(ref self: ContractState, new_game: ContractAddress) {
@@ -120,8 +121,8 @@ pub mod PirateNFT {
             self.puzzle_game.write(new_game);
         }
 
-        fn get_solves_count(self: @ContractState, token_id: u256) -> u32 {
-            self.stats.entry(token_id).read().solves_count
+        fn get_solved_count(self: @ContractState, token_id: u256) -> u32 {
+            self.stats.entry(token_id).read().solved_count
         }
 
         fn get_token_id_of_player(self: @ContractState, player: ContractAddress) -> u256 {
@@ -129,21 +130,21 @@ pub mod PirateNFT {
         }
 
         fn get_rank(self: @ContractState, token_id: u256) -> Rank {
-            let solves_count = self.stats.entry(token_id).read().solves_count;
+            let solved_count = self.stats.entry(token_id).read().solved_count;
 
-            if solves_count <= 9 {
+            if solved_count <= 9 {
                 Rank::TamedBeast
-            } else if solves_count <= 49 {
+            } else if solved_count <= 49 {
                 Rank::ObedientFighter
-            } else if solves_count <= 99 {
+            } else if solved_count <= 99 {
                 Rank::Headliner
-            } else if solves_count <= 299 {
+            } else if solved_count <= 299 {
                 Rank::Gifters
-            } else if solves_count <= 599 {
+            } else if solved_count <= 599 {
                 Rank::Shinuchi
-            } else if solves_count <= 999 {
+            } else if solved_count <= 999 {
                 Rank::FlyingSix
-            } else if solves_count <= 1999 {
+            } else if solved_count <= 1999 {
                 Rank::AllStar
             } else {
                 Rank::LeadPerformer
@@ -154,15 +155,18 @@ pub mod PirateNFT {
             self.stats.entry(token_id).read()
         }
 
-        fn has_token(self: @ContractState, player: ContractAddress) -> bool {
-            let token_id = self.player_token_ids.entry(player).read();
-            self.erc721.exists(token_id)
+        fn has_token(self: @ContractState, token_id: u256) -> bool {
+            println!("total supply: {:?}", self.erc721_enumerable.total_supply());
+            if token_id == 0 && self.erc721_enumerable.total_supply() == 0 {
+                false
+            } else {
+                self.erc721.exists(token_id)
+            }
         }
 
         fn get_token_uri(self: @ContractState, token_id: u256) -> felt252 {
             let rank = self.get_rank(token_id);
 
-            // Example hardcoded mapping, you could use a base URI
             match rank {
                 Rank::TamedBeast => 'tamed_beast_uri',
                 Rank::ObedientFighter => 'obedient_fighter_uri',
@@ -174,14 +178,23 @@ pub mod PirateNFT {
                 Rank::LeadPerformer => 'lead_performer_uri',
             }
         }
-    }
 
-    #[abi(embed_v0)]
-    impl UpgradeableImpl of IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             self.ownable.assert_only_owner();
 
             self.upgradeable.upgrade(new_class_hash);
+        }
+    }
+
+    impl ERC721HooksImpl of ERC721Component::ERC721HooksTrait<ContractState> {
+        fn before_update(
+            ref self: ERC721Component::ComponentState<ContractState>,
+            to: ContractAddress,
+            token_id: u256,
+            auth: ContractAddress,
+        ) {
+            let mut contract_state = self.get_contract_mut();
+            contract_state.erc721_enumerable.before_update(to, token_id);
         }
     }
 }
