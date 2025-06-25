@@ -65,7 +65,7 @@ pub trait IPuzzleGame<TContractState> {
     /// - Distributes KIBI token rewards
     /// - Emits PuzzleSolved event
     fn submit_solution(
-        ref self: TContractState, puzzle_id: felt252, solution_letter: felt252, salt: felt252,
+        ref self: TContractState, puzzle_id: felt252, solution: felt252, salt: felt252,
     );
 
     /// Set the PirateNFT contract address.

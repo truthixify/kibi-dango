@@ -1,63 +1,163 @@
-import Link from "next/link";
-import Image from "next/image";
-import { ConnectedAddress } from "~~/components/ConnectedAddress";
+"use client";
 
-const Home = () => {
+import type React from "react";
+
+import { useState } from "react";
+import { Button } from "~~/components/ui/button";
+import { Input } from "~~/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "~~/components/ui/card";
+import { MinimalLoader } from "~~/components/minimal-loader";
+import { MinimalSuccess } from "~~/components/minimal-success";
+import { MinimalFailure } from "~~/components/minimal-failure";
+
+export default function PuzzlePage() {
+  const [answer, setAnswer] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showFailure, setShowFailure] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    setIsSubmitting(false);
+
+    // Check if answer is correct (for demo, 'A' is correct)
+    if (answer.toUpperCase() === "A") {
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } else {
+      setShowFailure(true);
+      setTimeout(() => setShowFailure(false), 3000);
+    }
+
+    setAnswer("");
+  };
+
   return (
-    <div className="flex items-center flex-col flex-grow pt-10">
-      <div className="px-5">
-        <h1 className="text-center">
-          <span className="block text-2xl mb-2">Welcome to</span>
-          <span className="block text-4xl font-bold">Scaffold-Stark 2</span>
-        </h1>
-        <ConnectedAddress />
-        <p className="text-center text-lg">
-          Edit your smart contract{" "}
-          <code className="bg-underline italic text-base font-bold max-w-full break-words break-all inline-block">
-            YourContract.cairo
-          </code>{" "}
-          in{" "}
-          <code className="bg-underline italic text-base font-bold max-w-full break-words break-all inline-block">
-            packages/snfoundry/contracts/src
-          </code>
-        </p>
-      </div>
+    <div className="minimal-container py-8 lg:py-12">
+      <div className="max-w-3xl mx-auto fade-in">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white text-xl">🧩</span>
+          </div>
+          <h1 className="text-heading text-3xl mb-2">Daily Puzzle</h1>
+          <p className="text-body">Solve today's challenge and earn tokens</p>
+        </div>
 
-      <div className="bg-container flex-grow w-full mt-16 px-8 py-12">
-        <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
-          <div className="flex flex-col bg-base-100 relative text-[12px] px-10 py-10 text-center items-center max-w-xs rounded-3xl border border-gradient">
-            <div className="trapeze"></div>
-            <Image
-              src="/debug-icon.svg"
-              alt="icon"
-              width={26}
-              height={30}
-            ></Image>
-            <p>
-              Tinker with your smart contract using the{" "}
-              <Link href="/debug" passHref className="link">
-                Debug Contracts
-              </Link>{" "}
-              tab.
-            </p>
-          </div>
-          <div className="flex flex-col bg-base-100 relative text-[12px] px-10 py-10 text-center items-center max-w-xs rounded-3xl border border-gradient">
-            <div className="trapeze"></div>
-            <Image
-              src="/explorer-icon.svg"
-              alt="icon"
-              width={20}
-              height={32}
-            ></Image>
-            <p>
-              Play around with Multiwrite transactions using
-              useScaffoldMultiWrite() hook
-            </p>
-          </div>
+        {/* Puzzle Card */}
+        <Card className="mb-8 minimal-card hover-lift">
+          <CardHeader className="bg-gray-50 border-b border-gray-200">
+            <CardTitle className="text-heading text-xl flex items-center gap-2">
+              <span>📅</span>
+              Puzzle #247 - December 24, 2024
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="bg-blue-50 border-l-4 border-primary p-4 mb-6 rounded-r-lg">
+              <h3 className="text-subheading text-lg mb-3">
+                Today's Challenge
+              </h3>
+              <p className="text-body leading-relaxed">
+                I am the first letter of the blockchain that started it all. The
+                genesis of digital currency that revolutionized finance.
+                Satoshi's creation, decentralized and free. What letter am I?
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-subheading text-sm font-medium mb-2">
+                  Your Answer (Single Letter):
+                </label>
+                <div className="flex gap-3">
+                  <Input
+                    type="text"
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value.slice(0, 1))}
+                    placeholder="Enter letter..."
+                    className="text-xl text-center font-semibold h-12 minimal-input focus-minimal"
+                    maxLength={1}
+                    disabled={isSubmitting}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!answer || isSubmitting}
+                    className="h-12 px-6 minimal-button minimal-button-primary font-medium"
+                  >
+                    {isSubmitting ? "Checking..." : "Submit"}
+                  </Button>
+                </div>
+              </div>
+            </form>
+
+            {/* Hint */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-warning rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs">💡</span>
+                </div>
+                <div>
+                  <h4 className="text-subheading text-sm font-medium mb-1">
+                    Hint
+                  </h4>
+                  <p className="text-body text-sm">
+                    Think about the most famous cryptocurrency. What's the first
+                    letter of its name?
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="minimal-card hover-lift">
+            <CardContent className="p-4 text-center">
+              <div className="w-8 h-8 bg-success rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span className="text-white text-sm">🏆</span>
+              </div>
+              <h3 className="text-subheading text-sm font-medium">Streak</h3>
+              <p className="text-heading text-xl font-semibold">7 days</p>
+            </CardContent>
+          </Card>
+
+          <Card className="minimal-card hover-lift">
+            <CardContent className="p-4 text-center">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span className="text-white text-sm">⚡</span>
+              </div>
+              <h3 className="text-subheading text-sm font-medium">Solved</h3>
+              <p className="text-heading text-xl font-semibold">42</p>
+            </CardContent>
+          </Card>
+
+          <Card className="minimal-card hover-lift">
+            <CardContent className="p-4 text-center">
+              <div className="w-8 h-8 bg-warning rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span className="text-white text-sm">🪙</span>
+              </div>
+              <h3 className="text-subheading text-sm font-medium">Tokens</h3>
+              <p className="text-heading text-xl font-semibold">1,247</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Modals */}
+      {isSubmitting && <MinimalLoader />}
+      {showSuccess && <MinimalSuccess />}
+      {showFailure && <MinimalFailure />}
     </div>
   );
-};
-
-export default Home;
+}

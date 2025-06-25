@@ -245,7 +245,7 @@ pub mod PuzzleGame {
         fn submit_solution(
             ref self: ContractState,
             puzzle_id: felt252, // ID of the puzzle to solve
-            solution_letter: felt252, // The actual solution
+            solution: felt252, // The actual solution
             salt: felt252 // Salt used in the commitment
         ) {
             let player = get_caller_address();
@@ -257,7 +257,7 @@ pub mod PuzzleGame {
             assert(!self.puzzles.entry(puzzle_id).read().solved, 'already solved');
 
             // Verify the solution by computing the commitment and comparing
-            let computed_commitment = poseidon_hash_span(array![solution_letter, salt].span());
+            let computed_commitment = poseidon_hash_span(array![solution, salt].span());
 
             assert(computed_commitment == puzzle.solution_commitment, 'incorrect solution');
 

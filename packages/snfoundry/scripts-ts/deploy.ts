@@ -45,33 +45,41 @@ const deployScript = async (): Promise<void> => {
   const { address: kibiAddress } = await deployContract({
     contract: "KibiToken",
     constructorArgs: {
-        name: "Kibi",
-        symbol: "KIBI",
-        decimals: 18,
-        owner: deployer.address,
+      name: "Kibi",
+      symbol: "KIBI",
+      decimals: 18,
+      owner: deployer.address,
     },
   });
 
-  const { address: dangoAddress } = await deployContract({
+  const { address: nftAddress } = await deployContract({
     contract: "PirateNFT",
     constructorArgs: {
-        name: "Dango",
-        symbol: "DANGO",
-        base_uri: "https://kibi-dango.com/",
-        owner: deployer.address,
+      name: "Dango",
+      symbol: "DANGO",
+      base_uri: "https://kibi-dango.com/",
+      owner: deployer.address,
+    },
+  });
+
+  const { address: bankAddress } = await deployContract({
+    contract: "KibiBank",
+    constructorArgs: {
+      owner: deployer.address,
+      kibi_token: kibiAddress,
     },
   });
 
   await deployContract({
     contract: "PuzzleGame",
     constructorArgs: {
-        owner: deployer.address,
-        kibi_token: kibiAddress,
-        pirate_nft: dangoAddress,
-        min_bounty_easy: 3000,
-        min_bounty_medium: 5000,
-        min_bounty_hard: 7000,
-        ai_reward: 1000,
+      owner: deployer.address,
+      kibi_bank: bankAddress,
+      pirate_nft: nftAddress,
+      min_bounty_easy: 3000,
+      min_bounty_medium: 5000,
+      min_bounty_hard: 7000,
+      ai_reward: 1000,
     },
   });
 };

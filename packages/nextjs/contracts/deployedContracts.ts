@@ -7,7 +7,7 @@ const deployedContracts = {
   devnet: {
     KibiToken: {
       address:
-        "0x5f618d998f44b86306600e09de2cd3831af0bcb7a657c964cedabdad8a737e3",
+        "0x2fa5df471262deef357d8d7891fc6e416eacad56891391a0b3a90202f542f5a",
       abi: [
         {
           type: "impl",
@@ -377,6 +377,10 @@ const deployedContracts = {
           name: "constructor",
           inputs: [
             {
+              name: "owner",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
               name: "name",
               type: "core::byte_array::ByteArray",
             },
@@ -387,10 +391,6 @@ const deployedContracts = {
             {
               name: "decimals",
               type: "core::integer::u8",
-            },
-            {
-              name: "owner",
-              type: "core::starknet::contract_address::ContractAddress",
             },
           ],
         },
@@ -554,11 +554,11 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x2c89d554187e584f2069c07a09fc9c125ca8e67546e06088e2aca45c0948500",
+        "0x1db04cbecfc644e0fc0c4e744c70ee9fbf7c7b652a8b18a06db1adfab2582a6",
     },
     PirateNFT: {
       address:
-        "0x4919b5c56c7af2a91ce9937198174e6de6b3b704cd72401e5c3e120f452ec89",
+        "0x9bc22f8bb285a4cdbe059296c2faf9e0c16700c76405ca6450e12f900fc914",
       abi: [
         {
           type: "impl",
@@ -1312,6 +1312,10 @@ const deployedContracts = {
           name: "constructor",
           inputs: [
             {
+              name: "owner",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
               name: "name",
               type: "core::byte_array::ByteArray",
             },
@@ -1322,10 +1326,6 @@ const deployedContracts = {
             {
               name: "base_uri",
               type: "core::byte_array::ByteArray",
-            },
-            {
-              name: "owner",
-              type: "core::starknet::contract_address::ContractAddress",
             },
           ],
         },
@@ -1538,11 +1538,451 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x7ebc3dafa6d7d61061f75bfe4d4df6123a3ccd2db3660f243b42b835286e9e1",
+        "0x246587fa300a3a54991879d55318b15cfac9bc20eb1ba4691314d834695ca67",
+    },
+    KibiBank: {
+      address:
+        "0x77c2bc93b696a2c0ced5de2e75c78e43495aa2f45f03c89ec87577e482a90a9",
+      abi: [
+        {
+          type: "impl",
+          name: "KibiBankImpl",
+          interface_name: "contracts::interfaces::ikibi_bank::IKibiBank",
+        },
+        {
+          type: "struct",
+          name: "core::integer::u256",
+          members: [
+            {
+              name: "low",
+              type: "core::integer::u128",
+            },
+            {
+              name: "high",
+              type: "core::integer::u128",
+            },
+          ],
+        },
+        {
+          type: "enum",
+          name: "contracts::enums::kibi_bank_enums::DepositStatus",
+          variants: [
+            {
+              name: "Inactive",
+              type: "()",
+            },
+            {
+              name: "Active",
+              type: "()",
+            },
+            {
+              name: "Released",
+              type: "()",
+            },
+            {
+              name: "Refunded",
+              type: "()",
+            },
+          ],
+        },
+        {
+          type: "struct",
+          name: "contracts::structs::kibi_bank_structs::DepositInfo",
+          members: [
+            {
+              name: "amount",
+              type: "core::integer::u256",
+            },
+            {
+              name: "depositor",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "status",
+              type: "contracts::enums::kibi_bank_enums::DepositStatus",
+            },
+          ],
+        },
+        {
+          type: "interface",
+          name: "contracts::interfaces::ikibi_bank::IKibiBank",
+          items: [
+            {
+              type: "function",
+              name: "deposit_for_puzzle",
+              inputs: [
+                {
+                  name: "puzzle_id",
+                  type: "core::felt252",
+                },
+                {
+                  name: "depositor",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "amount",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "release_bounty",
+              inputs: [
+                {
+                  name: "puzzle_id",
+                  type: "core::felt252",
+                },
+                {
+                  name: "solver",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "get_kibi_token",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_deposit_info",
+              inputs: [
+                {
+                  name: "puzzle_id",
+                  type: "core::felt252",
+                },
+              ],
+              outputs: [
+                {
+                  type: "contracts::structs::kibi_bank_structs::DepositInfo",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_deposit_status",
+              inputs: [
+                {
+                  name: "puzzle_id",
+                  type: "core::felt252",
+                },
+              ],
+              outputs: [
+                {
+                  type: "contracts::enums::kibi_bank_enums::DepositStatus",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_depositor",
+              inputs: [
+                {
+                  name: "puzzle_id",
+                  type: "core::felt252",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_deposit_amount",
+              inputs: [
+                {
+                  name: "puzzle_id",
+                  type: "core::felt252",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "set_puzzle_game",
+              inputs: [
+                {
+                  name: "puzzle_game",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "set_kibi_token",
+              inputs: [
+                {
+                  name: "kibi_token",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "upgrade",
+              inputs: [
+                {
+                  name: "new_class_hash",
+                  type: "core::starknet::class_hash::ClassHash",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+          ],
+        },
+        {
+          type: "impl",
+          name: "OwnableMixinImpl",
+          interface_name: "openzeppelin_access::ownable::interface::OwnableABI",
+        },
+        {
+          type: "interface",
+          name: "openzeppelin_access::ownable::interface::OwnableABI",
+          items: [
+            {
+              type: "function",
+              name: "owner",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "transfer_ownership",
+              inputs: [
+                {
+                  name: "new_owner",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "renounce_ownership",
+              inputs: [],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "transferOwnership",
+              inputs: [
+                {
+                  name: "newOwner",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "renounceOwnership",
+              inputs: [],
+              outputs: [],
+              state_mutability: "external",
+            },
+          ],
+        },
+        {
+          type: "constructor",
+          name: "constructor",
+          inputs: [
+            {
+              name: "owner",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "kibi_token",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::ownable::ownable::OwnableComponent::OwnershipTransferred",
+          kind: "struct",
+          members: [
+            {
+              name: "previous_owner",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "key",
+            },
+            {
+              name: "new_owner",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "key",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::ownable::ownable::OwnableComponent::OwnershipTransferStarted",
+          kind: "struct",
+          members: [
+            {
+              name: "previous_owner",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "key",
+            },
+            {
+              name: "new_owner",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "key",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::ownable::ownable::OwnableComponent::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "OwnershipTransferred",
+              type: "openzeppelin_access::ownable::ownable::OwnableComponent::OwnershipTransferred",
+              kind: "nested",
+            },
+            {
+              name: "OwnershipTransferStarted",
+              type: "openzeppelin_access::ownable::ownable::OwnableComponent::OwnershipTransferStarted",
+              kind: "nested",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
+          kind: "struct",
+          members: [
+            {
+              name: "class_hash",
+              type: "core::starknet::class_hash::ClassHash",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "Upgraded",
+              type: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
+              kind: "nested",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "contracts::events::kibi_bank_events::DepositMade",
+          kind: "struct",
+          members: [
+            {
+              name: "puzzle_id",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "depositor",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "amount",
+              type: "core::integer::u256",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "contracts::events::kibi_bank_events::BountyReleased",
+          kind: "struct",
+          members: [
+            {
+              name: "puzzle_id",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "solver",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "amount",
+              type: "core::integer::u256",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "contracts::kibi_bank::KibiBank::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "OwnableEvent",
+              type: "openzeppelin_access::ownable::ownable::OwnableComponent::Event",
+              kind: "flat",
+            },
+            {
+              name: "UpgradeableEvent",
+              type: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
+              kind: "flat",
+            },
+            {
+              name: "DepositMade",
+              type: "contracts::events::kibi_bank_events::DepositMade",
+              kind: "nested",
+            },
+            {
+              name: "BountyReleased",
+              type: "contracts::events::kibi_bank_events::BountyReleased",
+              kind: "nested",
+            },
+          ],
+        },
+      ],
+      classHash:
+        "0x246e6f1a1c137ff6ed572776d5fb55badb41899dffc326f7160f68b9760403a",
     },
     PuzzleGame: {
       address:
-        "0x6bce4f76853d8d8a538980a76b175357a634395ff3e0304f105219861cb6b8",
+        "0x7ed38e7fe3c2e8a0b1e7afd0ccd6cd5bccdf0194a8b9868a0dbee89f5498745",
       abi: [
         {
           type: "impl",
@@ -1703,18 +2143,6 @@ const deployedContracts = {
             },
             {
               type: "function",
-              name: "set_kibi_token",
-              inputs: [
-                {
-                  name: "kibi_token",
-                  type: "core::starknet::contract_address::ContractAddress",
-                },
-              ],
-              outputs: [],
-              state_mutability: "external",
-            },
-            {
-              type: "function",
               name: "set_pirate_nft",
               inputs: [
                 {
@@ -1759,6 +2187,18 @@ const deployedContracts = {
                 {
                   name: "new_class_hash",
                   type: "core::starknet::class_hash::ClassHash",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "set_kibi_bank",
+              inputs: [
+                {
+                  name: "kibi_bank",
+                  type: "core::starknet::contract_address::ContractAddress",
                 },
               ],
               outputs: [],
@@ -1835,11 +2275,11 @@ const deployedContracts = {
               type: "core::starknet::contract_address::ContractAddress",
             },
             {
-              name: "kibi_token",
+              name: "pirate_nft",
               type: "core::starknet::contract_address::ContractAddress",
             },
             {
-              name: "pirate_nft",
+              name: "kibi_bank",
               type: "core::starknet::contract_address::ContractAddress",
             },
             {
@@ -2023,7 +2463,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0xc30002973253283c1f9f93dc8a1bb326c4a34fbcbf100cce0deae1a8258c7a",
+        "0x2e0d2a8cf26090e8c377ded0382c2581a588a47b1d69d86f40fdbbacb184489",
     },
   },
 } as const;
