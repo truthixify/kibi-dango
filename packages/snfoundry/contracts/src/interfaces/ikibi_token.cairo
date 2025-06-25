@@ -25,34 +25,34 @@ use starknet::{ClassHash, ContractAddress};
 
 #[starknet::interface]
 pub trait IKibiToken<TContractState> {
-    //! Mint new KIBI tokens to a specific address
-    //!
-    //! ## Parameters:
-    //! - **to**: The address that will receive the minted tokens
-    //! - **amount**: The number of tokens to mint
-    //!
-    //! ## Security:
-    //! - Only callable by the PuzzleGame contract
-    //! - Used for distributing rewards to puzzle solvers
+    /// Mint new KIBI tokens to a specific address.
+    ///
+    /// # Parameters
+    /// - `to`: The address that will receive the minted tokens
+    /// - `amount`: The number of tokens to mint
+    ///
+    /// # Security
+    /// - Only callable by the PuzzleGame contract
+    /// - Used for distributing rewards to puzzle solvers
     fn mint(ref self: TContractState, to: ContractAddress, amount: u256);
 
-    //! Set the PuzzleGame contract address
-    //!
-    //! ## Parameters:
-    //! - **puzzle_game**: The address of the PuzzleGame contract
-    //!
-    //! ## Security:
-    //! - Only callable by the contract owner
-    //! - Used to establish the connection between contracts
+    /// Set the PuzzleGame contract address.
+    ///
+    /// # Parameters
+    /// - `puzzle_game`: The address of the PuzzleGame contract
+    ///
+    /// # Security
+    /// - Only callable by the contract owner
+    /// - Used to establish the connection between contracts
     fn set_puzzle_game(ref self: TContractState, puzzle_game: ContractAddress);
 
-    //! Upgrade the contract to a new implementation
-    //!
-    //! ## Parameters:
-    //! - **new_class_hash**: The class hash of the new implementation
-    //!
-    //! ## Security:
-    //! - Only callable by the contract owner
-    //! - Enables contract upgrades while preserving state
+    /// Upgrade the contract to a new implementation.
+    ///
+    /// # Parameters
+    /// - `new_class_hash`: The class hash of the new implementation
+    ///
+    /// # Security
+    /// - Only callable by the contract owner
+    /// - Enables contract upgrades while preserving state
     fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }

@@ -7,5 +7,6 @@
 //! - **pirate_nft_enums**: Enums related to player ranks and NFT functionality
 //! - **puzzle_game_enums**: Enums related to puzzle difficulty levels and game states
 
+pub mod kibi_bank_enums;
 pub mod pirate_nft_enums;
 pub mod puzzle_game_enums;

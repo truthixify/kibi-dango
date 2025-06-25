@@ -10,6 +10,7 @@
 //! - **ipirate_nft**: Interface for the PirateNFT ERC721 contract
 //! - **ipuzzle_game**: Interface for the PuzzleGame contract
 
+pub mod ikibi_bank;
 pub mod ikibi_token;
 pub mod ipirate_nft;
 pub mod ipuzzle_game;

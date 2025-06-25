@@ -1,15 +1,20 @@
 // Integration tests for KibiToken, PirateNFT, and PuzzleGame contracts
 // This file contains comprehensive tests for the Kibi Dango game ecosystem
+use contracts::enums::kibi_bank_enums::DepositStatus;
+use contracts::enums::pirate_nft_enums::Rank;
+use contracts::enums::puzzle_game_enums::Difficulty;
+use contracts::events::kibi_bank_events::{BountyReleased, DepositMade};
+use contracts::events::puzzle_game_events::{PuzzleCreated, PuzzleSolved};
+use contracts::interfaces::ikibi_bank::{IKibiBankDispatcher, IKibiBankDispatcherTrait};
+use contracts::interfaces::ikibi_token::{IKibiTokenDispatcher, IKibiTokenDispatcherTrait};
+use contracts::interfaces::ipirate_nft::{IPirateNFTDispatcher, IPirateNFTDispatcherTrait};
+use contracts::interfaces::ipuzzle_game::{IPuzzleGameDispatcher, IPuzzleGameDispatcherTrait};
+use contracts::kibi_bank::KibiBank;
+use contracts::puzzle_game::PuzzleGame;
+use contracts::structs::kibi_bank_structs::DepositInfo;
+use contracts::structs::puzzle_game_structs::{Puzzle, Reward};
 use core::felt252_div;
 use core::poseidon::poseidon_hash_span;
-use kibi_dango::enums::pirate_nft_enums::Rank;
-use kibi_dango::enums::puzzle_game_enums::Difficulty;
-use kibi_dango::events::puzzle_game_events::{PuzzleCreated, PuzzleSolved};
-use kibi_dango::interfaces::ikibi_token::{IKibiTokenDispatcher, IKibiTokenDispatcherTrait};
-use kibi_dango::interfaces::ipirate_nft::{IPirateNFTDispatcher, IPirateNFTDispatcherTrait};
-use kibi_dango::interfaces::ipuzzle_game::{IPuzzleGameDispatcher, IPuzzleGameDispatcherTrait};
-use kibi_dango::puzzle_game::PuzzleGame;
-use kibi_dango::structs::puzzle_game_structs::{Puzzle, Reward};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin::token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
 use snforge_std::{
@@ -44,10 +49,10 @@ fn deploy_kibi_token() -> IKibiTokenDispatcher {
     let mut token_constructor_args = array![];
 
     // Serialize constructor arguments
+    Serde::serialize(@OWNER, ref token_constructor_args);
     Serde::serialize(@name_erc20, ref token_constructor_args);
     Serde::serialize(@symbol_erc20, ref token_constructor_args);
     Serde::serialize(@decimals, ref token_constructor_args);
-    Serde::serialize(@OWNER, ref token_constructor_args);
 
     // Deploy the contract
     let (token_address, _err) = token_contract
@@ -74,10 +79,10 @@ fn deploy_pirate_nft() -> IPirateNFTDispatcher {
     let mut nft_constructor_args = array![];
 
     // Serialize constructor arguments
+    Serde::serialize(@OWNER, ref nft_constructor_args);
     Serde::serialize(@name_nft, ref nft_constructor_args);
     Serde::serialize(@symbol_nft, ref nft_constructor_args);
     Serde::serialize(@base_uri, ref nft_constructor_args);
-    Serde::serialize(@OWNER, ref nft_constructor_args);
 
     // Deploy the contract
     let (nft_address, _err) = nft_contract.contract_class().deploy(@nft_constructor_args).unwrap();
@@ -88,10 +93,30 @@ fn deploy_pirate_nft() -> IPirateNFTDispatcher {
     pirate_nft
 }
 
+// Deploy KibiBank contract with required parameters
+// Returns dispatcher for interacting with the deployed contract
+fn deploy_kibi_bank() -> IKibiBankDispatcher {
+    let kibi_bank_contract = declare("KibiBank").unwrap();
+    let mut kibi_bank_constructor_args = array![];
+    let kibi_token = deploy_kibi_token();
+
+    Serde::serialize(@OWNER, ref kibi_bank_constructor_args);
+    Serde::serialize(@kibi_token.contract_address, ref kibi_bank_constructor_args);
+
+    let (kibi_bank_address, _err) = kibi_bank_contract
+        .contract_class()
+        .deploy(@kibi_bank_constructor_args)
+        .unwrap();
+
+    IKibiBankDispatcher { contract_address: kibi_bank_address }
+}
+
 // Deploy the complete puzzle game ecosystem
-// Sets up all three contracts and configures their relationships
-// Returns dispatchers for all three contracts
-fn deploy_puzzle_game() -> (IKibiTokenDispatcher, IPirateNFTDispatcher, IPuzzleGameDispatcher) {
+// Sets up all four contracts and configures their relationships
+// Returns dispatchers for all four contracts
+fn deploy_puzzle_game() -> (
+    IKibiTokenDispatcher, IPirateNFTDispatcher, IKibiBankDispatcher, IPuzzleGameDispatcher,
+) {
     // Set up game configuration parameters
     let min_bounty_easy: u256 = 3000;
     let min_bounty_medium: u256 = 5000;
@@ -102,36 +127,63 @@ fn deploy_puzzle_game() -> (IKibiTokenDispatcher, IPirateNFTDispatcher, IPuzzleG
     let kibi_token = deploy_kibi_token();
     let pirate_nft = deploy_pirate_nft();
 
-    // Declare and deploy the puzzle game contract
+    // Deploy the KibiBank contract
+    let kibi_bank = deploy_kibi_bank();
+
+    // Now deploy the real PuzzleGame contract with the correct KibiBank address
     let puzzle_contract = declare("PuzzleGame").unwrap();
     let mut puzzle_constructor_args = array![];
 
-    // Serialize constructor arguments for puzzle game
     Serde::serialize(@OWNER, ref puzzle_constructor_args);
-    Serde::serialize(@kibi_token.contract_address, ref puzzle_constructor_args);
     Serde::serialize(@pirate_nft.contract_address, ref puzzle_constructor_args);
+    Serde::serialize(@kibi_bank.contract_address, ref puzzle_constructor_args);
     Serde::serialize(@min_bounty_easy, ref puzzle_constructor_args);
     Serde::serialize(@min_bounty_medium, ref puzzle_constructor_args);
     Serde::serialize(@min_bounty_hard, ref puzzle_constructor_args);
     Serde::serialize(@ai_reward, ref puzzle_constructor_args);
 
-    // Deploy the puzzle game contract
     let (puzzle_address, _err) = puzzle_contract
         .contract_class()
         .deploy(@puzzle_constructor_args)
         .unwrap();
-
     let mut puzzle_game = IPuzzleGameDispatcher { contract_address: puzzle_address };
+    let total_supply = 21000000;
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(kibi_token.contract_address, OWNER);
     start_cheat_caller_address(pirate_nft.contract_address, OWNER);
+    start_cheat_caller_address(kibi_bank.contract_address, OWNER);
+    start_cheat_caller_address(puzzle_game.contract_address, OWNER);
 
-    // Configure contract relationships
+    // Now update KibiBank with the real PuzzleGame address
+    kibi_bank.set_puzzle_game(puzzle_game.contract_address);
+    kibi_bank.set_kibi_token(kibi_token.contract_address);
     kibi_token.set_puzzle_game(puzzle_game.contract_address);
+    kibi_token.mint(puzzle_game.contract_address, total_supply);
     pirate_nft.set_puzzle_game(puzzle_game.contract_address);
+    puzzle_game.set_kibi_bank(kibi_bank.contract_address);
 
-    (kibi_token, pirate_nft, puzzle_game)
+    stop_cheat_caller_address(kibi_bank.contract_address);
+    stop_cheat_caller_address(kibi_token.contract_address);
+    stop_cheat_caller_address(pirate_nft.contract_address);
+    stop_cheat_caller_address(puzzle_game.contract_address);
+
+    // Send token to all test users for testing purpose
+    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
+
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
+    let amount = 3000000;
+
+    kibi_token_erc20_dispatcher.transfer(OWNER, amount);
+    kibi_token_erc20_dispatcher.transfer(USER, amount);
+    kibi_token_erc20_dispatcher.transfer(OTHER_USER, amount);
+    kibi_token_erc20_dispatcher.transfer(ONE_MORE_USER, amount);
+
+    stop_cheat_caller_address(kibi_token.contract_address);
+
+    (kibi_token, pirate_nft, kibi_bank, puzzle_game)
 }
 
 // Test basic KibiToken contract deployment
@@ -152,11 +204,20 @@ fn test_deploy_pirate_nft() {
     // Test passes if deployment succeeds without errors
 }
 
+// Test basic KibiBank contract deployment
+// Verifies that the contract can be deployed successfully
+#[test]
+fn test_deploy_kibi_bank() {
+    // Deploy the PirateNFT contract
+    let _ = deploy_kibi_bank();
+    // Test passes if deployment succeeds without errors
+}
+
 // Test complete puzzle game ecosystem deployment
-// Verifies that all three contracts can be deployed and configured together
+// Verifies that all four contracts can be deployed and configured together
 #[test]
 fn test_deploy_puzzle_game() {
-    // Deploy the complete ecosystem (KibiToken, PirateNFT, PuzzleGame)
+    // Deploy the complete ecosystem (KibiToken, PirateNFT, KibiBank, PuzzleGame)
     let _ = deploy_puzzle_game();
     // Test passes if all contracts deploy and configure successfully
 }
@@ -209,6 +270,30 @@ fn test_upgrade_pirate_nft() {
     assert(class_hash == new_class_hash, 'Invalid class hash');
 }
 
+// Test KibiBank contract upgrade functionality
+// Verifies that the contract can be upgraded to a new implementation
+#[test]
+fn test_upgrade_kibi_bank() {
+    // Get the class hash of the current PirateNFT implementation
+    let new_class_hash: ClassHash = *declare("PirateNFT").unwrap().contract_class().class_hash;
+
+    // Deploy the initial PirateNFT contract
+    let pirate_nft = deploy_pirate_nft();
+
+    // Set up authorization for upgrade (only owner can upgrade)
+    start_cheat_caller_address(pirate_nft.contract_address, OWNER);
+
+    // Perform the upgrade to the new implementation
+    pirate_nft.upgrade(new_class_hash);
+
+    // Stop the authorization cheat
+    stop_cheat_caller_address(pirate_nft.contract_address);
+
+    // Verify that the contract has been upgraded
+    let class_hash = get_class_hash(pirate_nft.contract_address);
+    assert(class_hash == new_class_hash, 'Invalid class hash');
+}
+
 // Test PuzzleGame contract upgrade functionality
 // Verifies that the contract can be upgraded to a new implementation
 #[test]
@@ -217,7 +302,7 @@ fn test_upgrade_puzzle_game() {
     let new_class_hash: ClassHash = *declare("PuzzleGame").unwrap().contract_class().class_hash;
 
     // Deploy the complete ecosystem to get the puzzle game contract
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for upgrade (only owner can upgrade)
     start_cheat_caller_address(puzzle_game.contract_address, OWNER);
@@ -238,7 +323,7 @@ fn test_upgrade_puzzle_game() {
 #[test]
 fn test_mint_if_needed() {
     // Deploy the complete ecosystem
-    let (_, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (_, pirate_nft, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for NFT minting (only PuzzleGame can mint)
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -272,7 +357,7 @@ fn test_mint_if_needed() {
 #[test]
 fn test_increase_solved_count() {
     // Deploy the complete ecosystem
-    let (_, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (_, pirate_nft, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for solved count increment (only PuzzleGame can increment)
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -289,12 +374,93 @@ fn test_increase_solved_count() {
     assert(previous_solved_count + 3 == new_solved_count, 'Invalid solved count');
 }
 
+#[test]
+fn test_deposit_for_puzzle_and_release_bounty() {
+    let (kibi_token, _, kibi_bank, puzzle_game) = deploy_puzzle_game();
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
+    let mut spy_events = spy_events();
+    let amount = 1000;
+    let puzzle_id = 0;
+
+    start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, USER);
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
+    start_cheat_caller_address(kibi_bank.contract_address, USER);
+
+    let user_balance_before = kibi_token_erc20_dispatcher.balance_of(USER);
+    let bank_balance_before = kibi_token_erc20_dispatcher.balance_of(kibi_bank.contract_address);
+
+    kibi_bank.deposit_for_puzzle(puzzle_id, USER, amount);
+
+    let user_balance_after = kibi_token_erc20_dispatcher.balance_of(USER);
+    let bank_balance_after = kibi_token_erc20_dispatcher.balance_of(kibi_bank.contract_address);
+    let expected_deposit_info = DepositInfo {
+        amount, depositor: USER, status: DepositStatus::Active,
+    };
+    let deposit_info = kibi_bank.get_deposit_info(puzzle_id);
+
+    assert(user_balance_after + amount == user_balance_before, 'Invalid balance');
+    assert(user_balance_after + amount == user_balance_before, 'Invalid balance');
+    assert(bank_balance_after == bank_balance_before + amount, 'Invalid balance');
+    assert(deposit_info == expected_deposit_info, 'Invalid deposit info');
+
+    spy_events
+        .assert_emitted(
+            @array![
+                (
+                    kibi_bank.contract_address,
+                    KibiBank::Event::DepositMade(
+                        DepositMade { puzzle_id, depositor: USER, amount },
+                    ),
+                ),
+            ],
+        );
+
+    start_cheat_caller_address(kibi_bank.contract_address, puzzle_game.contract_address);
+
+    let user_balance_before_release = kibi_token_erc20_dispatcher.balance_of(OTHER_USER);
+    let bank_balance_before_release = kibi_token_erc20_dispatcher
+        .balance_of(kibi_bank.contract_address);
+
+    kibi_bank.release_bounty(puzzle_id, OTHER_USER);
+
+    let user_balance_after_release = kibi_token_erc20_dispatcher.balance_of(OTHER_USER);
+    let bank_balance_after_release = kibi_token_erc20_dispatcher
+        .balance_of(kibi_bank.contract_address);
+    let expected_updated_deposit_info = DepositInfo {
+        status: DepositStatus::Released, ..deposit_info,
+    };
+    let updated_deposit_info = kibi_bank.get_deposit_info(puzzle_id);
+
+    assert(user_balance_after_release == user_balance_before_release + amount, 'Invalid balance');
+    assert(bank_balance_after_release + amount == bank_balance_before_release, 'Invalid balance');
+    assert(updated_deposit_info == expected_updated_deposit_info, 'Invalid deposit info');
+
+    spy_events
+        .assert_emitted(
+            @array![
+                (
+                    kibi_bank.contract_address,
+                    KibiBank::Event::BountyReleased(
+                        BountyReleased { puzzle_id, solver: OTHER_USER, amount },
+                    ),
+                ),
+            ],
+        );
+}
+
 // Test AI puzzle creation and solving workflow
 // Verifies the complete lifecycle of an AI-generated puzzle
 #[test]
 fn test_puzzle_created_by_ai() {
     // Deploy the complete ecosystem
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
     let kibi_token_erc20_dispatcher = IERC20Dispatcher {
         contract_address: kibi_token.contract_address,
     };
@@ -312,9 +478,17 @@ fn test_puzzle_created_by_ai() {
     let previous_puzzle_id = puzzle_game.get_next_puzzle_id();
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, USER);
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, puzzle_game.contract_address,
+    );
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create the AI puzzle (assigned to USER)
     puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
@@ -405,7 +579,7 @@ fn test_puzzle_created_by_ai() {
 #[test]
 fn test_puzzle_created_by_user() {
     // Deploy the complete ecosystem
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
     let kibi_token_erc20_dispatcher = IERC20Dispatcher {
         contract_address: kibi_token.contract_address,
     };
@@ -423,9 +597,15 @@ fn test_puzzle_created_by_user() {
     let previous_puzzle_id = puzzle_game.get_next_puzzle_id();
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+    start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create the user puzzle (created by OTHER_USER)
     puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
@@ -516,9 +696,12 @@ fn test_puzzle_created_by_user() {
 #[test]
 fn test_weighted_solved_count_ai_puzzle() {
     // Deploy all contracts for testing
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
     let pirate_nft_erc721_dispatcher = IERC721Dispatcher {
         contract_address: pirate_nft.contract_address,
+    };
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
     };
 
     // Create and solve an AI puzzle (weight = 1)
@@ -529,12 +712,21 @@ fn test_weighted_solved_count_ai_puzzle() {
     let bounty_amount = 1000;
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, USER);
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, puzzle_game.contract_address,
+    );
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create the AI puzzle (assigned to USER)
     let puzzle_id = puzzle_game.get_next_puzzle_id();
+
     puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
 
     // Solve the puzzle with the assigned player (USER)
@@ -552,22 +744,30 @@ fn test_weighted_solved_count_ai_puzzle() {
 #[test]
 fn test_weighted_solved_count_easy_puzzle() {
     // Deploy all contracts for testing
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
     let pirate_nft_erc721_dispatcher = IERC721Dispatcher {
         contract_address: pirate_nft.contract_address,
     };
-
-    // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
-    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
-    start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
-
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
     // Create and solve an Easy puzzle (weight = 3)
     let puzzle_secret = 'EASY_PUZZLE';
     let salt: felt252 = 234567;
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::Easy;
     let bounty_amount = 3200;
+
+    // Set up authorization for cross-contract calls
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+    start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create the Easy puzzle (created by OTHER_USER, anyone can solve)
     let puzzle_id = puzzle_game.get_next_puzzle_id();
@@ -589,22 +789,30 @@ fn test_weighted_solved_count_easy_puzzle() {
 #[test]
 fn test_weighted_solved_count_medium_puzzle() {
     // Deploy all contracts for testing
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
     let pirate_nft_erc721_dispatcher = IERC721Dispatcher {
         contract_address: pirate_nft.contract_address,
     };
-
-    // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
-    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
-    start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
-
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
     // Create and solve a Medium puzzle (weight = 5)
     let puzzle_secret = 'MEDIUM_PUZZLE';
     let salt: felt252 = 345678;
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::Medium;
     let bounty_amount = 5400;
+
+    // Set up authorization for cross-contract calls
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+    start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create the Medium puzzle (created by OTHER_USER, anyone can solve)
     let puzzle_id = puzzle_game.get_next_puzzle_id();
@@ -626,9 +834,12 @@ fn test_weighted_solved_count_medium_puzzle() {
 #[test]
 fn test_weighted_solved_count_hard_puzzle() {
     // Deploy all contracts for testing
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
     let pirate_nft_erc721_dispatcher = IERC721Dispatcher {
         contract_address: pirate_nft.contract_address,
+    };
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
     };
 
     // Create and solve a Hard puzzle (weight = 7)
@@ -641,9 +852,15 @@ fn test_weighted_solved_count_hard_puzzle() {
     // Set up authorization for cross-contract calls
     let puzzle_id = puzzle_game.get_next_puzzle_id();
 
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+    start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create the Hard puzzle (created by OTHER_USER, anyone can solve)
     puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
@@ -665,13 +882,15 @@ fn test_weighted_solved_count_hard_puzzle() {
 #[test]
 fn test_cumulative_weighted_solved_count() {
     // Deploy all contracts for testing
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
     let pirate_nft_erc721_dispatcher = IERC721Dispatcher {
         contract_address: pirate_nft.contract_address,
     };
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
 
@@ -682,9 +901,21 @@ fn test_cumulative_weighted_solved_count() {
         ('MEDIUM_PUZZLE', 333333, Difficulty::Medium, 25000), // weight 5
         ('HARD_PUZZLE', 444444, Difficulty::Hard, 35000) // weight 7
     ];
-
     let mut expected_total = 0;
     let mut puzzle_id = puzzle_game.get_next_puzzle_id();
+    let puzzle_game_balance = kibi_token_erc20_dispatcher.balance_of(puzzle_game.contract_address);
+    let other_user_balance = kibi_token_erc20_dispatcher.balance_of(OTHER_USER);
+
+    // Do maximum approval for puzzle_game and user because the user rank can increase in the loop
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, puzzle_game.contract_address,
+    );
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, puzzle_game_balance);
+
+    start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, other_user_balance);
 
     // Solve each puzzle and track the cumulative weighted count
     loop {
@@ -694,6 +925,12 @@ fn test_cumulative_weighted_solved_count() {
             )) => {
                 // Create the puzzle commitment
                 let solution_commitment = poseidon_hash_span([secret, salt].span());
+
+                start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+                start_cheat_caller_address(
+                    kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+                );
+
                 puzzle_game.create_puzzle(solution_commitment, difficulty, bounty);
 
                 // Determine solver based on puzzle type
@@ -745,10 +982,12 @@ fn test_cumulative_weighted_solved_count() {
 #[test]
 fn test_rank_progression_with_weights() {
     // Deploy the complete ecosystem
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
 
@@ -765,12 +1004,23 @@ fn test_rank_progression_with_weights() {
         let salt: felt252 = 100000 + i.into();
         let solution_commitment = poseidon_hash_span([secret, salt].span());
         let puzzle_id = puzzle_game.get_next_puzzle_id();
+        let bounty_amount = 4700;
+
+        start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+        start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
+
+        kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+        start_cheat_caller_address(
+            kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+        );
 
         // Create the Easy puzzle (created by OTHER_USER)
-        puzzle_game.create_puzzle(solution_commitment, Difficulty::Easy, 4700);
+        puzzle_game.create_puzzle(solution_commitment, Difficulty::Easy, bounty_amount);
 
         // Solve the puzzle with USER
         start_cheat_caller_address(puzzle_game.contract_address, USER);
+
         puzzle_game.submit_solution(puzzle_id, secret, salt);
     }
 
@@ -783,14 +1033,27 @@ fn test_rank_progression_with_weights() {
     let salt: felt252 = 100003;
     let solution_commitment = poseidon_hash_span([secret, salt].span());
     let puzzle_id = puzzle_game.get_next_puzzle_id();
+    let bounty_amount = 3200;
+
+    start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+    start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create and solve the 4th Easy puzzle
-    puzzle_game.create_puzzle(solution_commitment, Difficulty::Easy, 3200);
+    puzzle_game.create_puzzle(solution_commitment, Difficulty::Easy, bounty_amount);
+
     start_cheat_caller_address(puzzle_game.contract_address, USER);
+
     puzzle_game.submit_solution(puzzle_id, secret, salt);
 
     // Verify the weighted solved count after 4 Easy puzzles (should be 12 points)
     let rank_info = pirate_nft.get_rank_info(token_id);
+
     assert(rank_info.solved_count == 12, 'Should have 12 weighted points');
 }
 
@@ -799,7 +1062,10 @@ fn test_rank_progression_with_weights() {
 #[test]
 fn test_user_puzzle_anyone_can_solve() {
     // Deploy the complete ecosystem
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
 
     // Set up puzzle parameters for a user-created puzzle
     let puzzle_secret = 'USER_PUZZLE';
@@ -810,9 +1076,15 @@ fn test_user_puzzle_anyone_can_solve() {
     let puzzle_id = puzzle_game.get_next_puzzle_id();
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+    start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create the user puzzle (OTHER_USER is the creator)
     puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
@@ -825,6 +1097,7 @@ fn test_user_puzzle_anyone_can_solve() {
     // Verify that USER gets the weighted solved count for solving the puzzle
     let token_id = pirate_nft.get_token_id_of_player(USER);
     let solved_count = pirate_nft.get_solved_count(token_id);
+
     assert!(solved_count == 3, "User should get weight 3 for solving Easy puzzle");
 }
 
@@ -833,7 +1106,7 @@ fn test_user_puzzle_anyone_can_solve() {
 #[test]
 fn test_puzzle_id_increment() {
     // Deploy the complete ecosystem
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for puzzle creation
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -862,7 +1135,10 @@ fn test_puzzle_id_increment() {
 #[test]
 fn test_multiple_players_solving_different_puzzles() {
     // Deploy the complete ecosystem
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
@@ -895,20 +1171,23 @@ fn test_multiple_players_solving_different_puzzles() {
 
                 // Set up creator authorization and create the puzzle
                 start_cheat_caller_address(puzzle_game.contract_address, creator);
+                start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, creator);
+
+                kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty);
+
+                start_cheat_caller_address(
+                    kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+                );
+
                 puzzle_game.create_puzzle(solution_commitment, difficulty, bounty);
 
                 // Alternate puzzle solving between users for fair distribution
                 let solver = if felt252_div(puzzle_id, 2) == 0 {
-                    // Set up solver authorization for USER
-                    start_cheat_caller_address(puzzle_game.contract_address, USER);
-
                     USER
                 } else {
-                    // Set up solver authorization for OTHER_USER
-                    start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
-
                     OTHER_USER
                 };
+
                 start_cheat_caller_address(puzzle_game.contract_address, solver);
 
                 // Solve the puzzle with the designated solver
@@ -936,7 +1215,7 @@ fn test_multiple_players_solving_different_puzzles() {
 #[test]
 fn test_ai_puzzle_reward_rank_multiplier() {
     // Deploy the complete ecosystem
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
     let kibi_token_erc20_dispatcher = IERC20Dispatcher {
         contract_address: kibi_token.contract_address,
     };
@@ -950,9 +1229,17 @@ fn test_ai_puzzle_reward_rank_multiplier() {
     let ai_puzzle_id_1 = puzzle_game.get_next_puzzle_id();
 
     // Set up authorization for cross-contract calls
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, USER);
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, puzzle_game.contract_address,
+    );
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, ai_bounty);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     // Create and solve the AI puzzle
     puzzle_game.create_puzzle(ai_commitment_1, ai_difficulty, ai_bounty);
@@ -973,11 +1260,19 @@ fn test_ai_puzzle_reward_rank_multiplier() {
         let salt: felt252 = 200000 + i.into();
         let commitment = poseidon_hash_span([secret, salt].span());
         let puzzle_id = puzzle_game.get_next_puzzle_id();
+        let bounty_amount = 7000;
 
         // Create as OTHER_USER, solve as USER
         start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
+        start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, OTHER_USER);
 
-        puzzle_game.create_puzzle(commitment, Difficulty::Hard, 7000);
+        kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+        start_cheat_caller_address(
+            kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+        );
+
+        puzzle_game.create_puzzle(commitment, Difficulty::Hard, bounty_amount);
 
         start_cheat_caller_address(puzzle_game.contract_address, USER);
 
@@ -996,9 +1291,19 @@ fn test_ai_puzzle_reward_rank_multiplier() {
     let ai_salt_2: felt252 = 222222;
     let ai_commitment_2 = poseidon_hash_span([ai_secret_2, ai_salt_2].span());
     let ai_puzzle_id_2 = puzzle_game.get_next_puzzle_id();
+    let rank_multiplier = 2;
 
     // Create and solve as USER
     start_cheat_caller_address(puzzle_game.contract_address, USER);
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, puzzle_game.contract_address,
+    );
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, ai_bounty * rank_multiplier);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
 
     puzzle_game.create_puzzle(ai_commitment_2, ai_difficulty, ai_bounty);
 
@@ -1021,7 +1326,7 @@ fn test_ai_puzzle_reward_rank_multiplier() {
 #[should_panic(expected: 'insufficient bounty')]
 fn test_insufficient_bounty_easy() {
     // Deploy the complete ecosystem
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for puzzle creation
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -1042,7 +1347,7 @@ fn test_insufficient_bounty_easy() {
 #[should_panic(expected: 'insufficient bounty')]
 fn test_insufficient_bounty_medium() {
     // Deploy the complete ecosystem
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for puzzle creation
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -1063,7 +1368,7 @@ fn test_insufficient_bounty_medium() {
 #[should_panic(expected: 'insufficient bounty')]
 fn test_insufficient_bounty_hard() {
     // Deploy the complete ecosystem
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for puzzle creation
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -1085,7 +1390,7 @@ fn test_insufficient_bounty_hard() {
 #[should_panic(expected: 'incorrect solution')]
 fn test_incorrect_solution() {
     // Deploy the complete ecosystem
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for puzzle creation and solving
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -1111,21 +1416,31 @@ fn test_incorrect_solution() {
 #[should_panic(expected: 'already solved')]
 fn test_solve_already_solved_puzzle() {
     // Deploy the complete ecosystem
-    let (kibi_token, pirate_nft, puzzle_game) = deploy_puzzle_game();
-
-    // Set up authorization for puzzle creation and solving
-    start_cheat_caller_address(kibi_token.contract_address, puzzle_game.contract_address);
-    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
-    start_cheat_caller_address(puzzle_game.contract_address, USER);
-
+    let (kibi_token, pirate_nft, kibi_bank, puzzle_game) = deploy_puzzle_game();
+    let kibi_token_erc20_dispatcher = IERC20Dispatcher {
+        contract_address: kibi_token.contract_address,
+    };
     // Create and solve an AI puzzle
     let puzzle_secret = 'SOLVE_ONCE';
     let salt: felt252 = 123456;
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::AI;
     let bounty_amount = 1000;
-
     let puzzle_id = puzzle_game.get_next_puzzle_id();
+
+    // Set up authorization for puzzle creation and solving
+    start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
+    start_cheat_caller_address(puzzle_game.contract_address, USER);
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, puzzle_game.contract_address,
+    );
+
+    kibi_token_erc20_dispatcher.approve(kibi_bank.contract_address, bounty_amount);
+
+    start_cheat_caller_address(
+        kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
+    );
+
     puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
     puzzle_game.submit_solution(puzzle_id, puzzle_secret, salt);
 
@@ -1139,7 +1454,7 @@ fn test_solve_already_solved_puzzle() {
 #[should_panic(expected: 'not assigned player')]
 fn test_wrong_player_solve_ai_puzzle() {
     // Deploy the complete ecosystem
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -1165,7 +1480,7 @@ fn test_wrong_player_solve_ai_puzzle() {
 #[should_panic(expected: 'not authorized')]
 fn test_unauthorized_nft_mint() {
     // Deploy the complete ecosystem
-    let (_, pirate_nft, _) = deploy_puzzle_game();
+    let (_, pirate_nft, _, _) = deploy_puzzle_game();
 
     // Try to mint NFT without being PuzzleGame contract - should panic
     // Note: We need to cheat the caller to be a different address
@@ -1179,7 +1494,7 @@ fn test_unauthorized_nft_mint() {
 #[should_panic(expected: 'not authorized')]
 fn test_unauthorized_solved_count_increment() {
     // Deploy the complete ecosystem
-    let (_, pirate_nft, puzzle_game) = deploy_puzzle_game();
+    let (_, pirate_nft, _, puzzle_game) = deploy_puzzle_game();
 
     // First mint an NFT legitimately
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -1196,7 +1511,7 @@ fn test_unauthorized_solved_count_increment() {
 #[should_panic(expected: 'Caller is not the owner')]
 fn test_unauthorized_set_puzzle_game() {
     // Deploy the complete ecosystem
-    let (_, pirate_nft, _) = deploy_puzzle_game();
+    let (_, pirate_nft, _, _) = deploy_puzzle_game();
 
     // Try to set puzzle game address without being owner - should panic
     start_cheat_caller_address(pirate_nft.contract_address, OTHER_USER);
@@ -1209,7 +1524,7 @@ fn test_unauthorized_set_puzzle_game() {
 #[should_panic(expected: 'Caller is not the owner')]
 fn test_unauthorized_upgrade() {
     // Deploy the complete ecosystem
-    let (kibi_token, _, _) = deploy_puzzle_game();
+    let (kibi_token, _, _, _) = deploy_puzzle_game();
 
     // Get a new class hash for upgrade
     let new_class_hash: ClassHash = *declare("KibiToken").unwrap().contract_class().class_hash;
@@ -1225,7 +1540,7 @@ fn test_unauthorized_upgrade() {
 #[should_panic(expected: 'incorrect solution')]
 fn test_solve_nonexistent_puzzle() {
     // Deploy the complete ecosystem
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for puzzle solving
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -1245,7 +1560,7 @@ fn test_solve_nonexistent_puzzle() {
 #[should_panic(expected: 'incorrect solution')]
 fn test_wrong_salt_solution() {
     // Deploy the complete ecosystem
-    let (_, _, puzzle_game) = deploy_puzzle_game();
+    let (_, _, _, puzzle_game) = deploy_puzzle_game();
 
     // Set up authorization for puzzle creation and solving
     start_cheat_caller_address(puzzle_game.contract_address, USER);

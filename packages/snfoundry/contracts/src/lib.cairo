@@ -17,6 +17,7 @@
 pub mod enums;
 pub mod events;
 pub mod interfaces;
+pub mod kibi_bank;
 pub mod kibi_token;
 pub mod pirate_nft;
 pub mod puzzle_game;

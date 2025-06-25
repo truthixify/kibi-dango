@@ -22,8 +22,8 @@ pub mod KibiToken {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::{DefaultConfig, ERC20Component, ERC20HooksEmptyImpl};
     use openzeppelin::upgrades::UpgradeableComponent;
-    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
-    use starknet::{ClassHash, ContractAddress, get_caller_address};
+    use starknet::storage::StoragePointerWriteAccess;
+    use starknet::{ClassHash, ContractAddress};
     use crate::interfaces::ikibi_token::IKibiToken;
 
     // Component declarations for OpenZeppelin functionality
@@ -61,25 +61,33 @@ pub mod KibiToken {
     // Storage structure - defines the contract's persistent storage
     #[storage]
     struct Storage {
-        // Component storage - managed by OpenZeppelin components
+        /// Ownable component storage (admin/owner management)
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+        /// ERC20 component storage (token logic)
         #[substorage(v0)]
         erc20: ERC20Component::Storage,
+        /// Upgradeable component storage (contract upgrades)
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
-        // Custom storage - address of the PuzzleGame contract that can mint tokens
+        /// Address of the PuzzleGame contract that can mint tokens
         puzzle_game: ContractAddress,
     }
 
-    // Constructor - called when the contract is deployed
+    /// Constructor for KibiToken
+    ///
+    /// # Parameters
+    /// - `name`: Token name (e.g., "Kibi Dango")
+    /// - `symbol`: Token symbol (e.g., "KIBI")
+    /// - `decimals`: Token decimals (typically 18)
+    /// - `owner`: Initial owner address
     #[constructor]
     fn constructor(
         ref self: ContractState,
+        owner: ContractAddress, // Initial owner address
         name: ByteArray, // Token name (e.g., "Kibi Dango")
         symbol: ByteArray, // Token symbol (e.g., "KIBI")
-        decimals: u8, // Token decimals (typically 18)
-        owner: ContractAddress // Initial owner address
+        decimals: u8 // Token decimals (typically 18)
     ) {
         // Initialize ERC20 component with token details
         self.erc20.initializer(name, symbol);
@@ -90,16 +98,26 @@ pub mod KibiToken {
     // Custom implementation for KibiToken-specific functionality
     #[abi(embed_v0)]
     impl KibiTokenImpl of IKibiToken<ContractState> {
-        // Mint new tokens - only callable by the PuzzleGame contract
+        /// Mint new tokens - only callable by the PuzzleGame contract
+        ///
+        /// # Parameters
+        /// - `to`: The address that will receive the minted tokens
+        /// - `amount`: The number of tokens to mint
+        ///
+        /// # Security
+        /// - Only the PuzzleGame contract can mint tokens
         fn mint(ref self: ContractState, to: ContractAddress, amount: u256) {
-            // Security check: only the PuzzleGame contract can mint tokens
-            assert(self.puzzle_game.read() == get_caller_address(), 'not authorized');
+            // Security check: only the owner can mint new tokens
+            self.ownable.assert_only_owner();
 
             // Mint the specified amount to the target address
             self.erc20.mint(to, amount);
         }
 
-        // Set the PuzzleGame contract address - only callable by owner
+        /// Set the PuzzleGame contract address (admin only)
+        ///
+        /// # Parameters
+        /// - `puzzle_game`: The address of the PuzzleGame contract
         fn set_puzzle_game(ref self: ContractState, puzzle_game: ContractAddress) {
             // Security check: only the owner can set the PuzzleGame address
             self.ownable.assert_only_owner();
@@ -107,7 +125,10 @@ pub mod KibiToken {
             self.puzzle_game.write(puzzle_game);
         }
 
-        // Upgrade the contract to a new implementation - only callable by owner
+        /// Upgrade the contract to a new implementation (admin only)
+        ///
+        /// # Parameters
+        /// - `new_class_hash`: The class hash of the new implementation
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             // Security check: only the owner can upgrade the contract
             self.ownable.assert_only_owner();

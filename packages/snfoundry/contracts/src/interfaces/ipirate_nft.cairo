@@ -34,102 +34,102 @@ use crate::structs::pirate_nft_structs::RankInfo;
 
 #[starknet::interface]
 pub trait IPirateNFT<TContractState> {
-    //! Mint NFT for a player if they don't already have one
-    //!
-    //! ## Parameters:
-    //! - **to**: The address of the player to mint for
-    //!
-    //! ## Returns:
-    //! - The token ID of the player's NFT (existing or newly minted)
-    //!
-    //! ## Security:
-    //! - Only callable by the PuzzleGame contract
-    //! - Ensures each player has exactly one NFT
+    /// Mint NFT for a player if they don't already have one.
+    ///
+    /// # Parameters
+    /// - `to`: The address of the player to mint for
+    ///
+    /// # Returns
+    /// - `u256`: The token ID of the player's NFT (existing or newly minted)
+    ///
+    /// # Security
+    /// - Only callable by the PuzzleGame contract
+    /// - Ensures each player has exactly one NFT
     fn mint_if_needed(ref self: TContractState, to: ContractAddress) -> u256;
 
-    //! Increment the solved puzzle count for a player's NFT
-    //!
-    //! ## Parameters:
-    //! - **token_id**: The token ID of the player's NFT
-    //! - **weight**: The weight to increment by (based on puzzle difficulty)
-    //!
-    //! ## Security:
-    //! - Only callable by the PuzzleGame contract
-    //! - Updates player progression and rank
+    /// Increment the solved puzzle count for a player's NFT.
+    ///
+    /// # Parameters
+    /// - `token_id`: The token ID of the player's NFT
+    /// - `weight`: The weight to increment by (based on puzzle difficulty)
+    ///
+    /// # Security
+    /// - Only callable by the PuzzleGame contract
+    /// - Updates player progression and rank
     fn increment_solved_count(ref self: TContractState, token_id: u256, weight: u32);
 
-    //! Set the PuzzleGame contract address
-    //!
-    //! ## Parameters:
-    //! - **new_game**: The address of the PuzzleGame contract
-    //!
-    //! ## Security:
-    //! - Only callable by the contract owner
-    //! - Used to establish the connection between contracts
+    /// Set the PuzzleGame contract address.
+    ///
+    /// # Parameters
+    /// - `new_game`: The address of the PuzzleGame contract
+    ///
+    /// # Security
+    /// - Only callable by the contract owner
+    /// - Used to establish the connection between contracts
     fn set_puzzle_game(ref self: TContractState, new_game: ContractAddress);
 
-    //! Get the number of puzzles solved by a player
-    //!
-    //! ## Parameters:
-    //! - **token_id**: The token ID of the player's NFT
-    //!
-    //! ## Returns:
-    //! - The total number of puzzles solved by the player
+    /// Get the number of puzzles solved by a player.
+    ///
+    /// # Parameters
+    /// - `token_id`: The token ID of the player's NFT
+    ///
+    /// # Returns
+    /// - `u32`: The total number of puzzles solved by the player
     fn get_solved_count(self: @TContractState, token_id: u256) -> u32;
 
-    //! Get the token ID associated with a player address
-    //!
-    //! ## Parameters:
-    //! - **player**: The address of the player
-    //!
-    //! ## Returns:
-    //! - The token ID of the player's NFT
+    /// Get the token ID associated with a player address.
+    ///
+    /// # Parameters
+    /// - `player`: The address of the player
+    ///
+    /// # Returns
+    /// - `u256`: The token ID of the player's NFT
     fn get_token_id_of_player(self: @TContractState, player: ContractAddress) -> u256;
 
-    //! Calculate the current rank of a player based on solve count
-    //!
-    //! ## Parameters:
-    //! - **token_id**: The token ID of the player's NFT
-    //!
-    //! ## Returns:
-    //! - The current rank of the player
+    /// Calculate the current rank of a player based on solve count.
+    ///
+    /// # Parameters
+    /// - `token_id`: The token ID of the player's NFT
+    ///
+    /// # Returns
+    /// - `Rank`: The current rank of the player
     fn get_rank(self: @TContractState, token_id: u256) -> Rank;
 
-    //! Get complete rank information for a token
-    //!
-    //! ## Parameters:
-    //! - **token_id**: The token ID of the player's NFT
-    //!
-    //! ## Returns:
-    //! - Complete rank information including solve count and rank
+    /// Get complete rank information for a token.
+    ///
+    /// # Parameters
+    /// - `token_id`: The token ID of the player's NFT
+    ///
+    /// # Returns
+    /// - `RankInfo`: Complete rank information including solve count and rank
     fn get_rank_info(self: @TContractState, token_id: u256) -> RankInfo;
 
-    //! Check if a player owns a specific token
-    //!
-    //! ## Parameters:
-    //! - **to**: The address of the player
-    //! - **token_id**: The token ID to check
-    //!
-    //! ## Returns:
-    //! - True if the player owns the token, false otherwise
+    /// Check if a player owns a specific token.
+    ///
+    /// # Parameters
+    /// - `to`: The address of the player
+    /// - `token_id`: The token ID to check
+    ///
+    /// # Returns
+    /// - `bool`: True if the player owns the token, false otherwise
     fn has_token(self: @TContractState, to: ContractAddress, token_id: u256) -> bool;
 
-    //! Get the token URI based on the player's current rank
-    //!
-    //! ## Parameters:
-    //! - **token_id**: The token ID of the player's NFT
-    //!
-    //! ## Returns:
-    //! - The metadata URI corresponding to the player's rank
+    /// Get the token URI based on the player's current rank.
+    ///
+    /// # Parameters
+    /// - `token_id`: The token ID of the player's NFT
+    ///
+    /// # Returns
+    /// - `felt252`: The metadata URI corresponding to the player's rank
     fn get_token_uri(self: @TContractState, token_id: u256) -> felt252;
 
-    //! Upgrade the contract to a new implementation
-    //!
-    //! ## Parameters:
-    //! - **new_class_hash**: The class hash of the new implementation
-    //!
-    //! ## Security:
-    //! - Only callable by the contract owner
-    //! - Enables contract upgrades while preserving state
+    /// Upgrade the contract to a new implementation.
+    ///
+    /// # Parameters
+    /// - `new_class_hash`: The class hash of the new implementation
+    ///
+    /// # Security
+    /// - Only callable by the contract owner
+    /// - Enables contract upgrades while preserving state
     fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }

@@ -8,5 +8,6 @@
 //! - **pirate_nft_structs**: Data structures for player statistics and rank information
 //! - **puzzle_game_structs**: Data structures for puzzle data and reward information
 
+pub mod kibi_bank_structs;
 pub mod pirate_nft_structs;
 pub mod puzzle_game_structs;

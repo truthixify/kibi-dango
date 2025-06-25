@@ -8,4 +8,5 @@
 //! - **puzzle_game_events**: Events emitted by the PuzzleGame contract for puzzle creation and
 //! solving
 
+pub mod kibi_bank_events;
 pub mod puzzle_game_events;

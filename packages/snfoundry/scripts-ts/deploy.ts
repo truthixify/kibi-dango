@@ -42,10 +42,36 @@ import { green } from "./helpers/colorize-log";
  * @returns {Promise<void>}
  */
 const deployScript = async (): Promise<void> => {
-  await deployContract({
-    contract: "YourContract",
+  const { address: kibiAddress } = await deployContract({
+    contract: "KibiToken",
     constructorArgs: {
-      owner: deployer.address,
+        name: "Kibi",
+        symbol: "KIBI",
+        decimals: 18,
+        owner: deployer.address,
+    },
+  });
+
+  const { address: dangoAddress } = await deployContract({
+    contract: "PirateNFT",
+    constructorArgs: {
+        name: "Dango",
+        symbol: "DANGO",
+        base_uri: "https://kibi-dango.com/",
+        owner: deployer.address,
+    },
+  });
+
+  await deployContract({
+    contract: "PuzzleGame",
+    constructorArgs: {
+        owner: deployer.address,
+        kibi_token: kibiAddress,
+        pirate_nft: dangoAddress,
+        min_bounty_easy: 3000,
+        min_bounty_medium: 5000,
+        min_bounty_hard: 7000,
+        ai_reward: 1000,
     },
   });
 };
