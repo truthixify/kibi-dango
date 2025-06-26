@@ -1,6 +1,11 @@
 'use client'
 
-export function Success() {
+interface SuccessProps {
+    text: string
+    earning: number
+}
+
+export function Success({ text, earning }: SuccessProps) {
     return (
         <div className="backdrop-minimal fixed inset-0 z-50 flex items-center justify-center">
             <div className="minimal-card shadow-medium mx-4 max-w-sm rounded-lg border-success bg-white p-8 text-center">
@@ -9,7 +14,7 @@ export function Success() {
                 </div>
 
                 <h3 className="text-heading mb-2 text-lg">Correct!</h3>
-                <p className="text-body mb-4 text-sm">Great job! You solved today's puzzle.</p>
+                <p className="text-body mb-4 text-sm">{text}</p>
 
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div className="mb-2 flex items-center justify-center space-x-3">
@@ -17,8 +22,7 @@ export function Success() {
                         <span className="text-gray-400">→</span>
                         <span className="text-lg">🪙</span>
                     </div>
-                    <p className="font-semibold text-success">+50 Tokens Earned!</p>
-                    <p className="text-caption mt-1 text-xs">Streak continues!</p>
+                    <p className="font-semibold text-success">{earning} Tokens Earned!</p>
                 </div>
             </div>
         </div>

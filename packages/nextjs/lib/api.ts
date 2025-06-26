@@ -183,3 +183,49 @@ export const updatePuzzle = async (puzzleId: string, solver: string, solved: boo
         throw error
     }
 }
+
+export const getAllPuzzles = async () => {
+    try {
+        const res = await fetch('/api/puzzle/')
+        if (!res.ok) throw new Error('Failed to fetch puzzles')
+        const resJson = await res.json()
+        return resJson.puzzles || []
+    } catch (error) {
+        console.error('getAllPuzzles error:', error)
+        throw error
+    }
+}
+
+export const getASinglePuzzle = async (puzzleId: string) => {
+    try {
+        const res = await fetch(`/api/puzzle/${puzzleId}`)
+        if (!res.ok) throw new Error('Failed to fetch puzzle')
+        const resJson = await res.json()
+        return resJson.puzzle || null
+    } catch (error) {
+        console.error('getASinglePuzzle error:', error)
+        throw error
+    }
+}
+
+export const markPuzzleSolved = async (address: string, puzzleId: string) => {
+    try {
+        const res = await fetch('/api/puzzle/${puzzleId}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ address, puzzleId }),
+        })
+
+        if (!res.ok) {
+            throw new Error('Failed to mark puzzle as solved')
+        }
+
+        const resJson = await res.json()
+        return resJson.puzzle || null
+    } catch (error) {
+        console.error('markPuzzleSolved error:', error)
+        throw error
+    }
+}

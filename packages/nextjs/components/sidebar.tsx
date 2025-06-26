@@ -127,6 +127,12 @@ export function Sidebar() {
             label: 'Create',
             subtitle: 'Make Puzzle',
         },
+        {
+            href: '/puzzles',
+            icon: Coins,
+            label: 'All Puzzles',
+            subtitle: 'Solve Challenges',
+        },
     ]
 
     const toggleSidebar = () => {
@@ -165,13 +171,13 @@ export function Sidebar() {
                     {/* Header */}
                     <div className="border-b border-gray-200 p-6">
                         <div className="mb-4 flex items-center space-x-3">
-                                    <Image
-                                        src={nftImageUrl || getRankImageUrl(currentRank)}
-                                        alt={`${currentRank} Rank`}
-                                        width={100}
-                                        height={100}
-                                        className="h-10 w-10 rounded-lg object-cover shadow-md"
-                                    />
+                            <Image
+                                src={nftImageUrl || getRankImageUrl(currentRank)}
+                                alt={`${currentRank} Rank`}
+                                width={100}
+                                height={100}
+                                className="h-10 w-10 rounded-lg object-cover shadow-md"
+                            />
                             <div>
                                 <h1 className="text-heading text-lg font-semibold">
                                     {userName ? userName : 'Puzzle Adventure'}
@@ -244,7 +250,9 @@ export function Sidebar() {
                                     <span className="text-xs font-bold text-white">{'--'}</span>
                                 </div>
                                 <div>
-                                    <p className="text-subheading text-sm">Solves Count: {solveCount}</p>
+                                    <p className="text-subheading text-sm">
+                                        Solves Count: {solveCount}
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -252,7 +260,9 @@ export function Sidebar() {
                                     <span className="text-xs font-bold text-white">{'--'}</span>
                                 </div>
                                 <div>
-                                    <p className="text-subheading text-sm">Current Rank: {currentRank}</p>
+                                    <p className="text-subheading text-sm">
+                                        Current Rank: {currentRank}
+                                    </p>
                                 </div>
                             </div>
                         </div>

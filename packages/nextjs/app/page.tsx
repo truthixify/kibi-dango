@@ -9,17 +9,14 @@ import { Loader } from '~~/components/loader'
 import { Success } from '~~/components/success'
 import { Failure } from '~~/components/failure'
 import { useAccount } from '~~/hooks/useAccount'
-import { RegistrationModal } from '~~/components/registration-modal'
 import {
     createAIDailyPuzzle,
     generateAIPuzzle,
     getAIDailyPuzzle,
-    getUserByAddress,
     updateAIDailyPuzzle,
 } from '~~/lib/api'
 import { useScaffoldContract } from '~~/hooks/scaffold-stark/useScaffoldContract'
 import { CairoCustomEnum, cairo, stark } from 'starknet'
-import { CustomConnectButton } from '~~/components/scaffold-stark/CustomConnectButton'
 
 interface DailyPuzzle {
     puzzleId: string
@@ -30,11 +27,10 @@ interface DailyPuzzle {
     solved?: boolean
 }
 
-export default function PuzzlePage() {
+export default function DailyPuzzlePage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
     const [showFailure, setShowFailure] = useState(false)
-    const [showRegistration, setShowRegistration] = useState(false)
     const [dailyPuzzle, setDailyPuzzle] = useState<DailyPuzzle | null>(null)
     const [solutionHash, setSolutionHash] = useState<string | null>(null)
     const [solution, setSolution] = useState<string>('')
@@ -122,12 +118,6 @@ export default function PuzzlePage() {
     }
 
     useEffect(() => {
-        const fetchUser = async () => {
-            if (!address) return
-            const user = await getUserByAddress(address)
-            if (!user) setShowRegistration(true)
-        }
-
         const fetchDailyPuzzle = async () => {
             if (!address) return
 
@@ -149,29 +139,11 @@ export default function PuzzlePage() {
             }
         }
 
-        fetchUser()
         fetchDailyPuzzle()
     }, [address])
 
-    if (!isConnected) {
-        return (
-            <div className="flex h-screen items-center justify-center">
-                <div className="text-center">
-                    <h2 className="mb-4 text-2xl font-semibold">Connect your wallet</h2>
-                    <p className="mb-6 text-gray-600">
-                        Please connect your wallet to play the daily puzzle.
-                    </p>
-                    <CustomConnectButton />
-                </div>
-            </div>
-        )
-    }
-
     return (
         <div className="minimal-container py-8 lg:py-12">
-            {!isConnected && (
-                <RegistrationModal isOpen={true} onClose={() => setShowRegistration(false)} />
-            )}
             <div className="fade-in mx-auto max-w-3xl">
                 {/* Header */}
                 <div className="mb-8 text-center">
@@ -282,7 +254,7 @@ export default function PuzzlePage() {
                     description="Please wait while your daily puzzle is loading"
                 />
             )}
-            {showSuccess && <Success />}
+            {showSuccess && <Success text="Great job! You solved today's puzzle." earning={1000} />}
             {showFailure && <Failure />}
         </div>
     )

@@ -3,10 +3,12 @@ import { ScaffoldStarkAppWithProviders } from '~~/components/ScaffoldStarkAppWit
 import '~~/styles/globals.css'
 import { ThemeProvider } from '~~/components/ThemeProvider'
 import { Sidebar } from '~~/components/sidebar'
+import { Main } from '~~/components/main'
 
 export const metadata: Metadata = {
-    title: 'Scaffold-Stark',
-    description: 'Fast track your starknet journey',
+    title: 'Kibi Dango',
+    description:
+        'Animal kingdom meets Starknet! Solve puzzles, earn $KIBI, and become a pirate legend.',
     icons: '/logo.ico',
 }
 
@@ -14,12 +16,10 @@ const ScaffoldStarkApp = ({ children }: { children: React.ReactNode }) => {
     return (
         <html suppressHydrationWarning>
             <body suppressHydrationWarning>
-                <ThemeProvider enableSystem>
+                <ThemeProvider enableSystem={false}>
                     <ScaffoldStarkAppWithProviders>
                         <Sidebar />
-                        <div className="fade-in pt-16 transition-all duration-300 lg:ml-80">
-                            {children}
-                        </div>
+                        <Main>{children}</Main>
                     </ScaffoldStarkAppWithProviders>
                 </ThemeProvider>
             </body>

@@ -109,7 +109,7 @@ export const Header = () => {
 
     return (
         <div className="navbar top-0 z-20 min-h-0 flex-shrink-0 justify-between px-0 sm:px-2 lg:static">
-            <div className="navbar-end mr-2 flex-grow gap-4">
+            <div className="navbar-end mr-2 mt-2 flex-grow gap-4">
                 {status === 'connected' && !isDeployed ? (
                     <span className="bg-[#8a45fc] p-1 text-[9px] text-white">
                         Wallet Not Deployed

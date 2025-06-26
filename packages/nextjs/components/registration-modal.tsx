@@ -13,9 +13,10 @@ import { registerUser } from '~~/lib/api'
 interface RegistrationModalProps {
     isOpen: boolean
     onClose: () => void
+    onRegistered: () => void
 }
 
-export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
+export function RegistrationModal({ isOpen, onClose, onRegistered }: RegistrationModalProps) {
     const [username, setUsername] = useState('')
     const [isRegistering, setIsRegistering] = useState(false)
     const [error, setError] = useState('')
@@ -54,6 +55,7 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
             }
 
             onClose()
+            onRegistered()
         } catch (err: any) {
             setError('Failed to register. Please try again.')
         } finally {

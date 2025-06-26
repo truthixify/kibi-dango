@@ -6,7 +6,7 @@
 const deployedContracts = {
     devnet: {
         KibiToken: {
-            address: '0x4dd9f3e83783fbc145c6ffea5fa9c2481318a7f3d5712297537754a9931289a',
+            address: '0x52955d71c6fd42b016ff5949c1db9645eb4a7ea2e886712d196bec126437c9b',
             abi: [
                 {
                     type: 'impl',
@@ -555,7 +555,7 @@ const deployedContracts = {
             classHash: '0x1db04cbecfc644e0fc0c4e744c70ee9fbf7c7b652a8b18a06db1adfab2582a6',
         },
         PirateNFT: {
-            address: '0x1f602b1555f73cf7955aac8cbbdf6cb46c8689af10413c3dfa661cf3170ddbb',
+            address: '0x3e44a5b51d09b505a2a1eb7ce575ac153e759fae6e3e27f557d52a9090ebfec',
             abi: [
                 {
                     type: 'impl',
@@ -1537,7 +1537,7 @@ const deployedContracts = {
             classHash: '0x246587fa300a3a54991879d55318b15cfac9bc20eb1ba4691314d834695ca67',
         },
         KibiBank: {
-            address: '0xd342a8b7498735933f563756d495b2a004f45da6ab1f230d9e9772220a9ed4',
+            address: '0x2ba92fb5c1e36d1d80ff098b521fd06d6a2e9da1d544d182a74fa68a3865a86',
             abi: [
                 {
                     type: 'impl',
@@ -1975,7 +1975,7 @@ const deployedContracts = {
             classHash: '0x246e6f1a1c137ff6ed572776d5fb55badb41899dffc326f7160f68b9760403a',
         },
         PuzzleGame: {
-            address: '0x2d0af35f2a4190f57f6f759825d2be9b2ef39b8aba8f113bd020007cb199d89',
+            address: '0x3a3177e004c90b92be7ca5e6cbf7c61c9727c1b8af8085f2b66bf6c7e12a4f5',
             abi: [
                 {
                     type: 'impl',
