@@ -66,7 +66,7 @@ export default function CreatePage() {
 
             if (!validateBountyAmount()) {
                 setError(
-                    `Bounty amount must be at least ${MIN_BOUNTY_AMOUNT[difficulty as keyof typeof MIN_BOUNTY_AMOUNT]} $KIBI for ${difficulty} puzzles`
+                    `You must offer at least ${MIN_BOUNTY_AMOUNT[difficulty as keyof typeof MIN_BOUNTY_AMOUNT]} $KIBI for ${difficulty} riddles`
                 )
                 setIsSubmitting(false)
                 return
@@ -92,7 +92,7 @@ export default function CreatePage() {
 
                 await tx.wait()
 
-                const newPuzzle = await createPuzzle(
+                await createPuzzle(
                     puzzleId,
                     question,
                     hint,
@@ -110,7 +110,7 @@ export default function CreatePage() {
                 setDifficulty('')
             } catch (error: any) {
                 console.error('Failed to create puzzle:', error)
-                setError(error.message || 'Failed to create puzzle. Please try again.')
+                setError(error.message || 'Something went wrong. Try again, brave pirate!')
             } finally {
                 setIsSubmitting(false)
             }
@@ -134,14 +134,15 @@ export default function CreatePage() {
                 <div className="mb-8 text-center">
                     <div className="floating-animation mb-4 inline-block">
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-blue-500 text-2xl shadow-lg">
-                            ✨
+                            🍡
                         </div>
                     </div>
                     <h1 className="mb-2 text-4xl font-bold text-gray-800">
-                        Create Your Own Puzzle
+                        Forge a Riddle for the Animal Kingdom
                     </h1>
                     <p className="text-lg text-gray-600">
-                        Help Otama create new challenges for fellow pirates!
+                        Help Otama spread kibi dango and challenge fellow pirates with a clever
+                        puzzle.
                     </p>
                 </div>
 
@@ -152,29 +153,24 @@ export default function CreatePage() {
                             <CardHeader className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
                                 <CardTitle className="flex items-center gap-2 text-2xl">
                                     <PlusCircle className="h-6 w-6" />
-                                    Puzzle Creator
+                                    Riddle Maker’s Workshop
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-8">
-                                {/* {error && (
-                                    <div className="mb-4 rounded-lg bg-red-100 p-3 text-red-700">
-                                        {error}
-                                    </div>
-                                )} */}
                                 {success && (
                                     <div className="mb-4 rounded-lg bg-green-100 p-3 text-green-700">
-                                        Puzzle created successfully!
+                                        🏴‍☠️ Puzzle launched into the seas! Let the pirates solve it!
                                     </div>
                                 )}
                                 <form onSubmit={handleCreatePuzzle} className="space-y-6">
                                     <div>
                                         <label className="mb-2 block text-lg font-medium text-gray-700">
-                                            Puzzle Question
+                                            Puzzle Riddle
                                         </label>
                                         <Textarea
                                             value={question}
                                             onChange={e => setQuestion(e.target.value)}
-                                            placeholder="Write your puzzle riddle here... Make it challenging but fair!"
+                                            placeholder="Spin a clever riddle for the bravest pirates..."
                                             className="min-h-32 border-2 border-green-200 text-gray-800 focus:border-green-400"
                                             required
                                             disabled={isSubmitting}
@@ -184,7 +180,7 @@ export default function CreatePage() {
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div>
                                             <label className="mb-2 block text-lg font-medium text-gray-700">
-                                                Solution (Single Word)
+                                                Secret Word (Answer)
                                             </label>
                                             <Input
                                                 type="text"
@@ -201,7 +197,7 @@ export default function CreatePage() {
 
                                         <div>
                                             <label className="mb-2 block text-lg font-medium text-gray-700">
-                                                Difficulty
+                                                Difficulty Level
                                             </label>
                                             <Select
                                                 value={difficulty}
@@ -214,13 +210,13 @@ export default function CreatePage() {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="easy">
-                                                        🟢 Easy ({'>'}= 3000 $KIBI)
+                                                        🟢 Easy — 3000 $KIBI+
                                                     </SelectItem>
                                                     <SelectItem value="medium">
-                                                        🟡 Medium ({'>'}= 5000 $KIBI)
+                                                        🟡 Medium — 5000 $KIBI+
                                                     </SelectItem>
                                                     <SelectItem value="hard">
-                                                        🔴 Hard ({'>'}= 7000 $KIBI)
+                                                        🔴 Hard — 7000 $KIBI+
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -235,7 +231,7 @@ export default function CreatePage() {
                                             type="text"
                                             value={hint}
                                             onChange={e => setHint(e.target.value)}
-                                            placeholder="Give pirates a helpful hint..."
+                                            placeholder="Otama says: A little hint never hurts..."
                                             className="border-2 border-green-200 text-gray-800 focus:border-green-400"
                                             disabled={isSubmitting}
                                         />
@@ -243,13 +239,19 @@ export default function CreatePage() {
 
                                     <div>
                                         <label className="mb-2 block text-lg font-medium text-gray-700">
-                                            Solver Reward
+                                            Dango Reward ($KIBI)
                                         </label>
                                         <Input
                                             type="number"
                                             value={bountyAmount}
                                             onChange={e => setBountyAmount(Number(e.target.value))}
-                                            placeholder={`Enter reward in $KIBI (min ${difficulty ? MIN_BOUNTY_AMOUNT[difficulty as keyof typeof MIN_BOUNTY_AMOUNT] : 3000})`}
+                                            placeholder={`Offer a bounty... min ${
+                                                difficulty
+                                                    ? MIN_BOUNTY_AMOUNT[
+                                                          difficulty as keyof typeof MIN_BOUNTY_AMOUNT
+                                                      ]
+                                                    : 3000
+                                            } $KIBI`}
                                             className="h-16 w-full rounded-lg border-2 border-green-200 text-center text-gray-800 focus:border-green-400"
                                             required
                                             min={
@@ -275,90 +277,80 @@ export default function CreatePage() {
                                             !validateBountyAmount()
                                         }
                                     >
-                                        {isSubmitting ? 'Publishing...' : 'Publish Puzzle 🚀'}
+                                        {isSubmitting ? 'Publishing...' : 'Launch Your Puzzle 🍡'}
                                     </Button>
                                 </form>
                             </CardContent>
                         </Card>
                     </div>
 
-                    {/* Sidebar */}
+                    {/* Otama Sidebar */}
                     <div className="space-y-6">
-                        {/* Otama's Tips */}
                         <Card className="border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-red-50">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-xl text-pink-800">
                                     <Lightbulb className="h-5 w-5" />
-                                    Otama's Tips
+                                    Otama’s Wisdom
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
                                     <div className="flex items-start gap-3 rounded-lg border border-pink-200 bg-white p-3">
                                         <div className="text-2xl">👧</div>
-                                        <div>
-                                            <p className="text-sm text-gray-700">
-                                                "Remember, keep your puzzle fun but fair! Pirates
-                                                should be able to solve it with some thinking."
-                                            </p>
-                                        </div>
+                                        <p className="text-sm text-gray-700">
+                                            “Make your riddle fair! Pirates should solve it with
+                                            wit, not guesswork.”
+                                        </p>
                                     </div>
-
                                     <div className="flex items-start gap-3 rounded-lg border border-pink-200 bg-white p-3">
                                         <div className="text-2xl">🍡</div>
-                                        <div>
-                                            <p className="text-sm text-gray-700">
-                                                "Make sure your riddle has a clear connection to the
-                                                answer. No trick questions!"
-                                            </p>
-                                        </div>
+                                        <p className="text-sm text-gray-700">
+                                            “Make sure the answer ties clearly to the puzzle. No
+                                            trickery!”
+                                        </p>
                                     </div>
-
                                     <div className="flex items-start gap-3 rounded-lg border border-pink-200 bg-white p-3">
-                                        <div className="text-2xl">⚡</div>
-                                        <div>
-                                            <p className="text-sm text-gray-700">
-                                                "Test your puzzle with friends first. If they can't
-                                                solve it, maybe it's too hard!"
-                                            </p>
-                                        </div>
+                                        <div className="text-2xl">🦄</div>
+                                        <p className="text-sm text-gray-700">
+                                            “Test it on a friend! If they can’t solve it, maybe it's
+                                            too tricky.”
+                                        </p>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Rewards Info */}
                         <Card className="border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-orange-50">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-xl text-yellow-800">
                                     <Gift className="h-5 w-5" />
-                                    Solver Rewards
+                                    Dango Rewards Guide
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between rounded border border-yellow-200 bg-white p-2">
-                                        <span className="text-sm font-medium">Easy Puzzle</span>
+                                        <span className="text-sm font-medium">Easy</span>
                                         <Badge className="bg-green-400 text-green-900">
-                                            Minimum of 3000 $KIBI/solve
+                                            3000 $KIBI+
                                         </Badge>
                                     </div>
                                     <div className="flex items-center justify-between rounded border border-yellow-200 bg-white p-2">
-                                        <span className="text-sm font-medium">Medium Puzzle</span>
+                                        <span className="text-sm font-medium">Medium</span>
                                         <Badge className="bg-yellow-400 text-yellow-900">
-                                            Minimum of 5000 $KIBI/solve
+                                            5000 $KIBI+
                                         </Badge>
                                     </div>
                                     <div className="flex items-center justify-between rounded border border-yellow-200 bg-white p-2">
-                                        <span className="text-sm font-medium">Hard Puzzle</span>
+                                        <span className="text-sm font-medium">Hard</span>
                                         <Badge className="bg-orange-400 text-orange-900">
-                                            Minimum of 7000 $KIBI/solve
+                                            7000 $KIBI+
                                         </Badge>
                                     </div>
                                 </div>
                                 <p className="mt-3 text-xs text-gray-600">
-                                    You have the freedom to set your own rewards, but make sure they
-                                    are fair and enticing for pirates to solve your puzzles!
+                                    Pirates love rewards! Be generous with your dango if you want
+                                    many challengers.
                                 </p>
                             </CardContent>
                         </Card>

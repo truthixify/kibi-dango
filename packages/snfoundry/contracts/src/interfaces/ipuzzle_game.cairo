@@ -92,6 +92,9 @@ pub trait IPuzzleGame<TContractState> {
     /// - Enables puzzle state tracking and verification
     fn get_puzzle(self: @TContractState, puzzle_id: felt252) -> Puzzle;
 
+
+    fn get_kibi_earned(self: @TContractState, player_address: ContractAddress) -> u256;
+
     /// Upgrade the contract to a new implementation.
     ///
     /// # Parameters

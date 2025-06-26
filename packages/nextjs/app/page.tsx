@@ -5,9 +5,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '~~/components/ui/button'
 import { Input } from '~~/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '~~/components/ui/card'
-import { MinimalLoader } from '~~/components/minimal-loader'
-import { MinimalSuccess } from '~~/components/minimal-success'
-import { MinimalFailure } from '~~/components/minimal-failure'
+import { Loader } from '~~/components/loader'
+import { Success } from '~~/components/success'
+import { Failure } from '~~/components/failure'
 import { useAccount } from '~~/hooks/useAccount'
 import { RegistrationModal } from '~~/components/registration-modal'
 import {
@@ -19,6 +19,7 @@ import {
 } from '~~/lib/api'
 import { useScaffoldContract } from '~~/hooks/scaffold-stark/useScaffoldContract'
 import { CairoCustomEnum, cairo, stark } from 'starknet'
+import { CustomConnectButton } from '~~/components/scaffold-stark/CustomConnectButton'
 
 interface DailyPuzzle {
     puzzleId: string
@@ -39,6 +40,7 @@ export default function PuzzlePage() {
     const [solution, setSolution] = useState<string>('')
     const [isCreatingPuzzle, setIsCreatingPuzzle] = useState(false)
     const [isSubmittingSolution, setIsSubmittingSolution] = useState(false)
+    const [isLoadingPuzzle, setIsLoadingPuzzle] = useState(true)
     const { address, isConnected } = useAccount()
     const { data: puzzleGame } = useScaffoldContract({ contractName: 'PuzzleGame' })
 
@@ -128,6 +130,7 @@ export default function PuzzlePage() {
 
         const fetchDailyPuzzle = async () => {
             if (!address) return
+
             try {
                 const puzzle: DailyPuzzle = await getAIDailyPuzzle(address)
                 if (puzzle) {
@@ -139,8 +142,10 @@ export default function PuzzlePage() {
             } catch (error) {
                 console.error('Failed to fetch daily puzzle:', error)
                 setIsSubmitting(false)
+                setIsLoadingPuzzle(false)
             } finally {
                 setIsSubmitting(false)
+                setIsLoadingPuzzle(false)
             }
         }
 
@@ -148,13 +153,24 @@ export default function PuzzlePage() {
         fetchDailyPuzzle()
     }, [address])
 
+    if (!isConnected) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-center">
+                    <h2 className="mb-4 text-2xl font-semibold">Connect your wallet</h2>
+                    <p className="mb-6 text-gray-600">
+                        Please connect your wallet to play the daily puzzle.
+                    </p>
+                    <CustomConnectButton />
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="minimal-container py-8 lg:py-12">
-            {isConnected && (
-                <RegistrationModal
-                    isOpen={showRegistration}
-                    onClose={() => setShowRegistration(false)}
-                />
+            {!isConnected && (
+                <RegistrationModal isOpen={true} onClose={() => setShowRegistration(false)} />
             )}
             <div className="fade-in mx-auto max-w-3xl">
                 {/* Header */}
@@ -248,9 +264,26 @@ export default function PuzzlePage() {
             </div>
 
             {/* Modals */}
-            {(isCreatingPuzzle || isSubmittingSolution) && <MinimalLoader />}
-            {showSuccess && <MinimalSuccess />}
-            {showFailure && <MinimalFailure />}
+            {isCreatingPuzzle && (
+                <Loader
+                    title="Creating Puzzle..."
+                    description="Please wait while Otama is creating puzzle"
+                />
+            )}
+            {isSubmittingSolution && (
+                <Loader
+                    title="Submitting Solution..."
+                    description="Otama is verifying your solution, maybe you'll get a kibi dango, who knows"
+                />
+            )}
+            {isLoadingPuzzle && (
+                <Loader
+                    title="Loading Daily Puzzle..."
+                    description="Please wait while your daily puzzle is loading"
+                />
+            )}
+            {showSuccess && <Success />}
+            {showFailure && <Failure />}
         </div>
     )
 }

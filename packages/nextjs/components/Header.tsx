@@ -109,46 +109,6 @@ export const Header = () => {
 
     return (
         <div className="navbar top-0 z-20 min-h-0 flex-shrink-0 justify-between px-0 sm:px-2 lg:static">
-            <div className="navbar-start -mr-2 w-auto lg:w-1/2">
-                <div className="dropdown lg:hidden" ref={burgerMenuRef}>
-                    <label
-                        tabIndex={0}
-                        className={`btn btn-ghost ml-1 [@media(max-width:379px)]:!h-9 [@media(max-width:379px)]:!min-h-0 [@media(max-width:379px)]:!w-10 [@media(max-width:379px)]:!px-3 [@media(max-width:379px)]:!py-1 ${isDrawerOpen ? 'hover:bg-secondary' : 'hover:bg-transparent'}`}
-                        onClick={() => {
-                            setIsDrawerOpen(prevIsOpenState => !prevIsOpenState)
-                        }}
-                    >
-                        <Bars3Icon className="h-1/2" />
-                    </label>
-                    {isDrawerOpen && (
-                        <ul
-                            tabIndex={0}
-                            className="menu-compact menu dropdown-content mt-3 w-52 rounded-box bg-base-100 p-2 shadow"
-                            onClick={() => {
-                                setIsDrawerOpen(false)
-                            }}
-                        >
-                            <HeaderMenuLinks />
-                        </ul>
-                    )}
-                </div>
-                <Link
-                    href="/"
-                    passHref
-                    className="ml-4 mr-6 hidden shrink-0 items-center gap-2 lg:flex"
-                >
-                    <div className="relative flex h-10 w-10">
-                        <Image alt="SE2 logo" className="cursor-pointer" fill src="/logo.svg" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="font-bold leading-tight">Scaffold-Stark</span>
-                        <span className="text-xs">Starknet dev stack</span>
-                    </div>
-                </Link>
-                <ul className="menu menu-horizontal hidden gap-2 px-1 lg:flex lg:flex-nowrap">
-                    <HeaderMenuLinks />
-                </ul>
-            </div>
             <div className="navbar-end mr-2 flex-grow gap-4">
                 {status === 'connected' && !isDeployed ? (
                     <span className="bg-[#8a45fc] p-1 text-[9px] text-white">

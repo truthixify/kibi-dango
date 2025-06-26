@@ -25,9 +25,22 @@ export async function registerUser(address: string, username: string) {
             throw new Error(errorData.error || 'Failed to register user')
         }
 
-        return await res.json()
+        const reJson = await res.json()
+        return reJson.user || null
     } catch (error) {
         console.error('registerUser error:', error)
+        throw error
+    }
+}
+
+export const getAllUsers = async () => {
+    try {
+        const res = await fetch('/api/user')
+        if (!res.ok) throw new Error('Failed to fetch users')
+        const resJson = await res.json()
+        return resJson.users || []
+    } catch (error) {
+        console.error('getAllUsers error:', error)
         throw error
     }
 }

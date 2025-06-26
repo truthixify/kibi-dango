@@ -1,0 +1,9 @@
+{
+  "name": "All Star",
+  "description": "One of the top executives of the Animal Kingdom Pirates. Their puzzle record is legendary.",
+  "image": "ipfs://bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/all_star.png",
+  "attributes": [
+    { "trait_type": "Rank", "value": "All Star" },
+    { "trait_type": "Solved Count", "value": "1000-1999" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Headliner",
+  "description": "A trusted commander among the Beast Pirates, leading others into battle.",
+  "image": "ipfs://bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/headliner.png",
+  "attributes": [
+    { "trait_type": "Rank", "value": "Headliner" },
+    { "trait_type": "Solved Count", "value": "50-99" }
+  ]
+}

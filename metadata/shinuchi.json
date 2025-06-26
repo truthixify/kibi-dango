@@ -1,0 +1,9 @@
+{
+  "name": "Shinuchi",
+  "description": "Elite Gifters who show extraordinary promise and command over others.",
+  "image": "ipfs://bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/shinuchi.png",
+  "attributes": [
+    { "trait_type": "Rank", "value": "Shinuchi" },
+    { "trait_type": "Solved Count", "value": "300-599" }
+  ]
+}

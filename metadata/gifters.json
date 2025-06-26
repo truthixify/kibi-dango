@@ -1,0 +1,9 @@
+{
+  "name": "Gifters",
+  "description": "Granted SMILE powers and entrusted with special roles. Their puzzle instincts are sharp.",
+  "image": "ipfs://bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/gifters.png",
+  "attributes": [
+    { "trait_type": "Rank", "value": "Gifters" },
+    { "trait_type": "Solved Count", "value": "100-299" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Lead Performer",
+  "description": "The pinnacle of power in the Animal Kingdom. Revered as a true master of all puzzles.",
+  "image": "ipfs://bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/lead_performer.png",
+  "attributes": [
+    { "trait_type": "Rank", "value": "Lead Performer" },
+    { "trait_type": "Solved Count", "value": "2000+" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Tamed Beast",
+  "description": "A pirate who just joined the Animal Kingdom ranks. Full of potential!",
+  "image": "ipfs://bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/tamed_beast.png",
+  "attributes": [
+    { "trait_type": "Rank", "value": "Tamed Beast" },
+    { "trait_type": "Solved Count", "value": "0-9" }
+  ]
+}

@@ -17,7 +17,9 @@ const ScaffoldStarkApp = ({ children }: { children: React.ReactNode }) => {
                 <ThemeProvider enableSystem>
                     <ScaffoldStarkAppWithProviders>
                         <Sidebar />
-                        {children}
+                        <div className="fade-in pt-16 transition-all duration-300 lg:ml-80">
+                            {children}
+                        </div>
                     </ScaffoldStarkAppWithProviders>
                 </ThemeProvider>
             </body>

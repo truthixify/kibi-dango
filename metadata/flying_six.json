@@ -1,0 +1,9 @@
+{
+  "name": "Flying Six",
+  "description": "Top officers with ambition and cunning. Feared even by their peers.",
+  "image": "ipfs://bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/flying_six.png",
+  "attributes": [
+    { "trait_type": "Rank", "value": "Flying Six" },
+    { "trait_type": "Solved Count", "value": "600-999" }
+  ]
+}

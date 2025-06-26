@@ -1,0 +1,9 @@
+{
+  "name": "Obedient Fighter",
+  "description": "This pirate has proven loyal and capable. A dependable foot soldier of the Animal Kingdom.",
+  "image": "ipfs://bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/obedient_fighter.png",
+  "attributes": [
+    { "trait_type": "Rank", "value": "Obedient Fighter" },
+    { "trait_type": "Solved Count", "value": "10-49" }
+  ]
+}

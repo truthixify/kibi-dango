@@ -8,6 +8,7 @@ import { Input } from '~~/components/ui/input'
 import { Label } from '~~/components/ui/label'
 import { User, Loader2 } from 'lucide-react'
 import { useAccount } from '@starknet-react/core'
+import { registerUser } from '~~/lib/api'
 
 interface RegistrationModalProps {
     isOpen: boolean
@@ -25,7 +26,7 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
         if (!/^[a-zA-Z0-9_]+$/.test(name))
             return 'Only alphanumeric characters and underscores allowed'
         if (name.length < 3) return 'Username must be at least 3 characters'
-        if (name.length > 20) return 'Username must be less than 20 characters'
+        if (name.length > 30) return 'Username must be less than 20 characters'
         return ''
     }
 
@@ -46,25 +47,15 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
             setIsRegistering(true)
             setError('')
 
-            const res = await fetch('/api/user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    address,
-                    username: username.trim(),
-                }),
-            })
+            const user = await registerUser(address, username)
 
-            const data = await res.json()
-            if (!res.ok) {
-                throw new Error(data?.error || 'Failed to register')
+            if (!user) {
+                throw new Error('Failed to register')
             }
 
             onClose()
         } catch (err: any) {
-            setError(err.message || 'Failed to register. Please try again.')
+            setError('Failed to register. Please try again.')
         } finally {
             setIsRegistering(false)
         }
@@ -72,11 +63,9 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="w-[90%] rounded-lg bg-base-100 sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle className="text-center text-xl">
-                        Welcome to Puzzle Adventure!
-                    </DialogTitle>
+                    <DialogTitle className="text-center text-xl">Join the Otama Army!</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
@@ -85,14 +74,17 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
                             <User className="h-8 w-8 text-primary" />
                         </div>
                         <p className="text-muted-foreground">
-                            You're new here! Choose a username to get started.
+                            <span className="block">
+                                You want a <span className="font-semibold">kibi dango?</span>
+                            </span>{' '}
+                            Then swear loyalty to Otama by choosing your pirate name!
                         </p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="username" className="text-subheading">
-                                Username
+                                Choose Your Pirate Name
                             </Label>
                             <Input
                                 id="username"
@@ -102,16 +94,17 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
                                     setUsername(e.target.value)
                                     setError('')
                                 }}
-                                placeholder="Enter your username"
+                                placeholder="Enter your pirate name"
                                 className="minimal-input focus-minimal"
                                 disabled={isRegistering}
-                                maxLength={20}
+                                minLength={3}
+                                maxLength={30}
                             />
                             {error && (
                                 <p className="text-destructive text-sm text-red-500">{error}</p>
                             )}
-                            <p className="text-caption text-x text-red-500">
-                                Only letters, numbers, underscores (3–20 characters)
+                            <p className="text-caption text-xs">
+                                Use letters, numbers, or underscores (3–30 characters)
                             </p>
                         </div>
 
@@ -124,12 +117,12 @@ export function RegistrationModal({ isOpen, onClose }: RegistrationModalProps) {
                                 {isRegistering ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Creating Account...
+                                        Handing over your kibi dango...
                                     </>
                                 ) : (
                                     <>
                                         <User className="mr-2 h-4 w-4" />
-                                        Create Account
+                                        Join the Crew
                                     </>
                                 )}
                             </Button>

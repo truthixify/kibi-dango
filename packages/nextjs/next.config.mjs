@@ -27,6 +27,11 @@ const nextConfig = {
                 hostname: 'img.starkurabu.com',
                 pathname: '/**',
             },
+            {
+                protocol: 'https',
+                hostname: 'gateway.pinata.cloud',
+                pathname: '/**',
+            },
         ],
     },
     typescript: {

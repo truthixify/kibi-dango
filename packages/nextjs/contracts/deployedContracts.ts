@@ -6,7 +6,7 @@
 const deployedContracts = {
     devnet: {
         KibiToken: {
-            address: '0x5ca1fc17fbf711a266600f14507b11036d3a6bc09324bdb5d5a8b30537f34fc',
+            address: '0x4dd9f3e83783fbc145c6ffea5fa9c2481318a7f3d5712297537754a9931289a',
             abi: [
                 {
                     type: 'impl',
@@ -555,7 +555,7 @@ const deployedContracts = {
             classHash: '0x1db04cbecfc644e0fc0c4e744c70ee9fbf7c7b652a8b18a06db1adfab2582a6',
         },
         PirateNFT: {
-            address: '0x79ff1f0a4668fb78c6a1d6bc67d46bf2495bbb4bf25b450dc43e66eef7ffeb3',
+            address: '0x1f602b1555f73cf7955aac8cbbdf6cb46c8689af10413c3dfa661cf3170ddbb',
             abi: [
                 {
                     type: 'impl',
@@ -1537,7 +1537,7 @@ const deployedContracts = {
             classHash: '0x246587fa300a3a54991879d55318b15cfac9bc20eb1ba4691314d834695ca67',
         },
         KibiBank: {
-            address: '0x7fa052402356bd55a4bea86c35a70c0795ee18d6477f8cb896d5fdfb5b1dfcd',
+            address: '0xd342a8b7498735933f563756d495b2a004f45da6ab1f230d9e9772220a9ed4',
             abi: [
                 {
                     type: 'impl',
@@ -1975,7 +1975,7 @@ const deployedContracts = {
             classHash: '0x246e6f1a1c137ff6ed572776d5fb55badb41899dffc326f7160f68b9760403a',
         },
         PuzzleGame: {
-            address: '0x97c579683acd283806f36110093cea16cdeb615a6a53801469505d6df62921',
+            address: '0x2d0af35f2a4190f57f6f759825d2be9b2ef39b8aba8f113bd020007cb199d89',
             abi: [
                 {
                     type: 'impl',
@@ -2162,6 +2162,22 @@ const deployedContracts = {
                             outputs: [
                                 {
                                     type: 'contracts::structs::puzzle_game_structs::Puzzle',
+                                },
+                            ],
+                            state_mutability: 'view',
+                        },
+                        {
+                            type: 'function',
+                            name: 'get_kibi_earned',
+                            inputs: [
+                                {
+                                    name: 'player_address',
+                                    type: 'core::starknet::contract_address::ContractAddress',
+                                },
+                            ],
+                            outputs: [
+                                {
+                                    type: 'core::integer::u256',
                                 },
                             ],
                             state_mutability: 'view',
@@ -2448,7 +2464,7 @@ const deployedContracts = {
                     ],
                 },
             ],
-            classHash: '0x615e9dabf8ea65d6afbfa915367878435c76d7d1d4d90651a12723bd491024f',
+            classHash: '0x50a00594833bc7bedba1e12ce2ff40f5eea787bd805a074f1d2dec2a13e242f',
         },
     },
 } as const

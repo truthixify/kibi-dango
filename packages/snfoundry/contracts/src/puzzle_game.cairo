@@ -78,6 +78,7 @@ pub mod PuzzleGame {
         upgradeable: UpgradeableComponent::Storage,
         // Custom storage for game-specific functionality
         puzzles: Map<felt252, Puzzle>, // Main puzzle mapping - puzzle_id -> puzzle data
+        kibi_earned: Map<ContractAddress, u256>,
         /// Address of the PirateNFT contract
         pirate_nft: ContractAddress,
         /// Address of the KibiBank contract (escrows puzzle bounties)
@@ -282,6 +283,10 @@ pub mod PuzzleGame {
             // Query the actual claimed amount from KibiBank for the event
             let claimed_amount = kibi_bank.get_deposit_amount(puzzle_id);
 
+            // Updated Kibi earned
+            let previous_kibi_earned = self.kibi_earned.entry(player).read();
+            self.kibi_earned.entry(player).write(previous_kibi_earned + claimed_amount);
+
             // Emit the PuzzleSolved event for off-chain tracking
             self
                 .emit(
@@ -314,6 +319,10 @@ pub mod PuzzleGame {
         // Get puzzle data by ID
         fn get_puzzle(self: @ContractState, puzzle_id: felt252) -> Puzzle {
             self.puzzles.entry(puzzle_id).read()
+        }
+
+        fn get_kibi_earned(self: @ContractState, player_address: ContractAddress) -> u256 {
+            self.kibi_earned.entry(player_address).read()
         }
 
         // Upgrade the contract to a new implementation - only callable by owner

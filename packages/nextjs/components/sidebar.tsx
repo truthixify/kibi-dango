@@ -4,16 +4,64 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Coins, Home, Trophy, PlusCircle, User, Menu, X } from 'lucide-react'
-import { CustomConnectButton } from './scaffold-stark/CustomConnectButton'
 import { useAccount } from '~~/hooks/useAccount'
 import { getUserByAddress } from '~~/lib/api' // make sure path matches
+import { useScaffoldContract } from '~~/hooks/scaffold-stark/useScaffoldContract'
+import Image from 'next/image'
+
+const baseUrl =
+    'https://gateway.pinata.cloud/ipfs/bafybeicgkefinig2amq6wbgftzy7kfkz44ssdlg2ckuimxuahjxufqrpzu/'
+
+const ranks = {
+    TamedBeast: { name: 'Tamed Beast', minSolves: 0, color: 'bg-gray-400' },
+    ObedientFighter: { name: 'Obedient Fighter', minSolves: 10, color: 'bg-green-500' },
+    Headliner: { name: 'Headliner', minSolves: 50, color: 'bg-blue-500' },
+    Gifters: { name: 'Gifters', minSolves: 100, color: 'bg-yellow-500' },
+    Shinuchi: { name: 'Shinuchi', minSolves: 300, color: 'bg-orange-500' },
+    FlyingSix: { name: 'Flying Six', minSolves: 600, color: 'bg-red-500' },
+    AllStar: { name: 'All Star', minSolves: 1000, color: 'bg-purple-600' },
+    LeadPerformer: { name: 'Lead Performer', minSolves: 2000, color: 'bg-pink-600' },
+} as const
+
+type RankKey = keyof typeof ranks
+
+function getRankImageUrl(rank: RankKey): string {
+    const filename =
+        rank
+            .replace(/([A-Z])/g, '_$1')
+            .toLowerCase()
+            .replace(/^_/, '') + '.png'
+
+    return `${baseUrl}${filename}`
+}
+
+const rankThresholds = Object.entries(ranks).map(([key, val]) => ({
+    name: key,
+    min: val.minSolves,
+}))
+
+function getRankFromSolves(solves: number): keyof typeof ranks {
+    for (let i = rankThresholds.length - 1; i >= 0; i--) {
+        if (solves >= rankThresholds[i].min) return rankThresholds[i].name as keyof typeof ranks
+    }
+    return 'TamedBeast'
+}
 
 export function Sidebar() {
     const [isOpen, setIsOpen] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
     const [userName, setUserName] = useState<string | null>(null)
     const pathname = usePathname()
+    const { data: puzzleGame } = useScaffoldContract({
+        contractName: 'PuzzleGame',
+    })
     const { address } = useAccount()
+    const { data: pirateNFT } = useScaffoldContract({ contractName: 'PirateNFT' })
+
+    const [solveCount, setSolveCount] = useState(0)
+    const [currentRank, setCurrentRank] = useState<keyof typeof ranks>('TamedBeast')
+    const [kibiEarned, setKibiEarned] = useState<number>(0)
+    const [nftImageUrl, setNftImageUrl] = useState<string>('')
 
     useEffect(() => {
         const checkScreenSize = () => {
@@ -27,13 +75,32 @@ export function Sidebar() {
     }, [])
 
     useEffect(() => {
-        if (!address) return
+        if (!address || !pirateNFT || !puzzleGame) return
+
+        const fetchData = async () => {
+            try {
+                const tokenId = await pirateNFT.get_token_id_of_player(address)
+                const kibiEarned = await puzzleGame.get_kibi_earned(address)
+                setKibiEarned(Number(kibiEarned))
+                const userSolveCount = Number(await pirateNFT.get_solved_count(tokenId))
+                setSolveCount(userSolveCount)
+
+                const rank = getRankFromSolves(userSolveCount)
+                setCurrentRank(rank)
+                setNftImageUrl(getRankImageUrl(rank))
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error)
+            }
+        }
+
         const fetchUser = async () => {
             const user = await getUserByAddress(address)
             if (user) setUserName(user.username)
         }
+
+        fetchData()
         fetchUser()
-    }, [address])
+    }, [address, pirateNFT, puzzleGame])
 
     const navItems = [
         {
@@ -98,11 +165,15 @@ export function Sidebar() {
                     {/* Header */}
                     <div className="border-b border-gray-200 p-6">
                         <div className="mb-4 flex items-center space-x-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                                <span className="text-lg font-semibold text-white">P</span>
-                            </div>
+                                    <Image
+                                        src={nftImageUrl || getRankImageUrl(currentRank)}
+                                        alt={`${currentRank} Rank`}
+                                        width={100}
+                                        height={100}
+                                        className="h-10 w-10 rounded-lg object-cover shadow-md"
+                                    />
                             <div>
-                                <h1 className="text-heading text-lg font-semibold text-red-900">
+                                <h1 className="text-heading text-lg font-semibold">
                                     {userName ? userName : 'Puzzle Adventure'}
                                 </h1>
                             </div>
@@ -112,11 +183,10 @@ export function Sidebar() {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
                                     <Coins className="h-4 w-4 text-warning" />
-                                    <span className="text-subheading text-sm">Tokens</span>
+                                    <span className="text-subheading text-sm">Kibi Earned</span>
                                 </div>
                                 <span className="text-heading font-semibold">
-                                    {/* Replace with actual token balance when available */}
-                                    {'--'}
+                                    {kibiEarned !== null ? kibiEarned : '--'}
                                 </span>
                             </div>
                         </div>
@@ -174,12 +244,18 @@ export function Sidebar() {
                                     <span className="text-xs font-bold text-white">{'--'}</span>
                                 </div>
                                 <div>
-                                    <p className="text-subheading text-sm">Day Streak</p>
+                                    <p className="text-subheading text-sm">Solves Count: {solveCount}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-success">
+                                    <span className="text-xs font-bold text-white">{'--'}</span>
+                                </div>
+                                <div>
+                                    <p className="text-subheading text-sm">Current Rank: {currentRank}</p>
                                 </div>
                             </div>
                         </div>
-
-                        {address && <CustomConnectButton />}
                     </div>
                 </div>
             </aside>
