@@ -1,7 +1,6 @@
 import { connectDB } from '~~/lib/mongo-db'
 import Puzzle from '../model'
 import User from '../../user/model'
-import { console } from 'inspector'
 
 export async function GET(req: Request, { params }: { params: { puzzleId: string } }) {
     try {

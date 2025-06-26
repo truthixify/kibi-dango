@@ -14,7 +14,7 @@
         "start": "next start",
         "test": "vitest",
         "vercel": "vercel",
-        "vercel:yolo": "vercel --build-env NEXT_PUBLIC_IGNORE_BUILD_ERROR=true"
+        "vercel:yolo": "vercel --build-env NEXT_PUBLIC_IGNORE_BUILD_ERROR=true --prod"
     },
     "dependencies": {
         "@ai-sdk/openai": "^1.3.22",
