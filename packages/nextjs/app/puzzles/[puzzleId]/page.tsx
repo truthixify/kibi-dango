@@ -152,7 +152,7 @@ export default function PuzzleDetailPage() {
             {showSuccess && (
                 <Success
                     text="Great job! You solved today's puzzle."
-                    earning={1000}
+                    earning={puzzle.rewardAmount}
                     onClose={() => setShowSuccess(false)}
                 />
             )}

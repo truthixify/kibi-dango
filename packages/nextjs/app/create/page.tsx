@@ -58,7 +58,7 @@ export default function CreatePage() {
         }
 
         try {
-            const tx = await kibiToken.approve(kibiBank?.address, BigInt(bountyAmount))
+            const tx = await kibiToken.approve(kibiBank?.address, BigInt(bountyAmount * 1e18))
             setIsApproved(true)
         } catch (err: any) {
             console.error(err)
@@ -123,7 +123,7 @@ export default function CreatePage() {
                     puzzleId,
                     BigInt(solutionHash),
                     difficultyLevel,
-                    BigInt(bountyAmount * 1e18), // Assuming $KIBI has 18 decimals
+                    BigInt(bountyAmount * 1e18) // Assuming $KIBI has 18 decimals
                 )
 
                 await createPuzzle(
@@ -148,6 +148,7 @@ export default function CreatePage() {
                 setError(error.message || 'Something went wrong. Try again, brave pirate!')
             } finally {
                 setIsSubmitting(false)
+                setIsApproved(false)
             }
         },
         [
@@ -248,11 +249,10 @@ export default function CreatePage() {
                                                 required
                                                 disabled={isSubmitting}
                                             >
-                                                <SelectTrigger className="h-16 border-2 border-green-200 text-lg focus:border-green-400 bg-base-300">
+                                                <SelectTrigger className="h-16 border-2 border-green-200 bg-base-300 text-lg focus:border-green-400">
                                                     <SelectValue placeholder="Select difficulty" />
                                                 </SelectTrigger>
-                                                <SelectContent
-                                                className='bg-base-300'>
+                                                <SelectContent className="bg-base-300">
                                                     <SelectItem value="Easy">
                                                         🟢 Easy — 3000 $KIBI+
                                                     </SelectItem>

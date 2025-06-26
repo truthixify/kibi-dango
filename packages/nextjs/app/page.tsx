@@ -54,7 +54,7 @@ export default function DailyPuzzlePage() {
                 puzzleId,
                 BigInt(puzzle?.solutionHash),
                 difficulty_level,
-                BigInt(1000 * 1e18), // 1000 tokens
+                BigInt(1000 * 1e18) // 1000 tokens
             )
 
             const newPuzzle = await createAIDailyPuzzle(
@@ -75,9 +75,9 @@ export default function DailyPuzzlePage() {
             }
 
             setDailyPuzzle(dailyPuzzleData)
-            setShowSuccess(true)
+            // setShowSuccess(true)
         } catch (error) {
-            setShowFailure(true)
+            // setShowFailure(true)
             console.error('Failed to create daily puzzle:', error)
         } finally {
             setIsCreatingPuzzle(false)

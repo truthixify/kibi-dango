@@ -28,7 +28,7 @@ export function Success({ text, earning, onClose }: SuccessProps) {
 
                 <button
                     onClick={onClose}
-                    className="bg-success mt-2 px-4 py-2 text-sm text-white hover:bg-success-dark rounded transition-colors"
+                    className="hover:bg-success-dark mt-2 rounded bg-success px-4 py-2 text-sm text-white transition-colors"
                 >
                     Close
                 </button>

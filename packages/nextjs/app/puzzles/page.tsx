@@ -15,6 +15,7 @@ interface Puzzle {
     creator: string
     createdAt: string
     solved: boolean
+    rewardAmount: number
 }
 
 export default function AllPuzzlesPage() {
@@ -59,11 +60,19 @@ export default function AllPuzzlesPage() {
                         >
                             <Card className="hover-lift cursor-pointer transition-shadow">
                                 <CardHeader>
-                                    <CardTitle className="text-xl">{puzzle.question}</CardTitle>
+                                    <CardTitle className="text-xl">
+                                        {puzzle.question.split(' ').length > 10
+                                            ? puzzle.question.split(' ').slice(0, 10).join(' ') +
+                                              '...'
+                                            : puzzle.question}
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-muted text-sm">
                                         🎯 Difficulty: {puzzle.difficulty}
+                                    </p>
+                                    <p className="text-muted text-sm">
+                                        💰 Reward: {puzzle.rewardAmount} $KIBI
                                     </p>
                                     <p className="text-muted text-sm">💡 Hint: {puzzle.hint}</p>
                                     <p className="mt-2 text-xs text-gray-500">

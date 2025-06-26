@@ -76,10 +76,10 @@ const deployScript = async (): Promise<void> => {
       owner: deployer.address,
       kibi_bank: bankAddress,
       pirate_nft: nftAddress,
-      min_bounty_easy: 3000,
-      min_bounty_medium: 5000,
-      min_bounty_hard: 7000,
-      ai_reward: 1000,
+      min_bounty_easy: "3000000000000000000000",
+      min_bounty_medium: "5000000000000000000000",
+      min_bounty_hard: "7000000000000000000000",
+      ai_reward: "1000000000000000000000",
     },
   });
 };
