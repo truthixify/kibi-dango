@@ -1,48 +1,76 @@
-import { connectDB } from "~~/lib/mongo-db";
-import DailyPuzzle from "./model";
-import User from "../user/model";
-import { generateCryptoPuzzle } from "~~/lib/generate-puzzle";
+import { connectDB } from '~~/lib/mongo-db'
+import DailyPuzzle from './model'
+import User from '../user/model'
+import { generateCryptoPuzzle } from '~~/lib/generate-puzzle'
+
+export async function POST(req: Request) {
+  try {
+    await connectDB()
+    const body = await req.json()
+    const { puzzleId, address, question, hint, salt, solutionHash } = body
+
+    if (!puzzleId || !address || !question || !hint || !salt || !solutionHash) {
+      return Response.json(
+        { error: 'Missing required fields: puzzleId, address, question, hint, salt, solutionHash' },
+        { status: 400 }
+      )
+    }
+
+    const user = await User.findOne({ address })
+    if (!user) {
+      return Response.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const today = new Date().toISOString().split('T')[0]
+
+    // Check if a puzzle already exists for today
+    const existing = await DailyPuzzle.findOne({ user: user._id, date: today })
+    if (existing) {
+      return Response.json({ error: 'Puzzle for today already exists' }, { status: 409 })
+    }
+
+    const newPuzzle = new DailyPuzzle({
+      user: user._id,
+      puzzleId,
+      question,
+      hint,
+      salt,
+      solutionHash,
+      date: today,
+    })
+
+    await newPuzzle.save()
+
+    return Response.json({ success: true, puzzle: newPuzzle }, { status: 201 })
+  } catch (err) {
+    return Response.json(
+      { success: false, error: err instanceof Error ? err.message : err },
+      { status: 500 }
+    )
+  }
+}
 
 export async function GET(req: Request) {
   try {
-    await connectDB();
+    await connectDB()
 
-    const { searchParams } = new URL(req.url);
-    const address = searchParams.get("address");
+    const { searchParams } = new URL(req.url)
+    const address = searchParams.get('address')
 
     if (!address) {
-      return Response.json(
-        { error: "User address is required" },
-        { status: 400 },
-      );
+      return Response.json({ error: 'User address is required' }, { status: 400 })
     }
 
-    const user = await User.findOne({ address });
+    const user = await User.findOne({ address })
     if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
+      return Response.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split('T')[0]
 
-    let daily = await DailyPuzzle.findOne({ user: user._id, date: today });
-
+    const daily = await DailyPuzzle.findOne({ user: user._id, date: today })
     if (!daily) {
-      const aiPuzzleData = await generateCryptoPuzzle();
-
-      if (!aiPuzzleData) {
-        throw new Error("Failed to generate puzzle data from AI service.");
-      }
-
-      daily = new DailyPuzzle({
-        user: user._id,
-        question: aiPuzzleData.question,
-        salt: aiPuzzleData.salt,
-        solutionHash: aiPuzzleData.solutionHash,
-        hint: aiPuzzleData.hint,
-        date: today,
-      });
-
-      await daily.save();
+      return Response.json({ error: 'Puzzle not found for today' }, { status: 404 })
     }
 
     return Response.json(
@@ -55,12 +83,12 @@ export async function GET(req: Request) {
           date: daily.date,
         },
       },
-      { status: 200 },
-    );
+      { status: 200 }
+    )
   } catch (err) {
     return Response.json(
       { success: false, error: err instanceof Error ? err.message : err },
-      { status: 500 },
-    );
+      { status: 500 }
+    )
   }
 }

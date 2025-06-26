@@ -7,7 +7,7 @@ const deployedContracts = {
   devnet: {
     KibiToken: {
       address:
-        "0x2fa5df471262deef357d8d7891fc6e416eacad56891391a0b3a90202f542f5a",
+        "0x666e0684f8146b7e01fec6e3026943433b985321a7d324102ced71dcf0ecfe8",
       abi: [
         {
           type: "impl",
@@ -558,7 +558,7 @@ const deployedContracts = {
     },
     PirateNFT: {
       address:
-        "0x9bc22f8bb285a4cdbe059296c2faf9e0c16700c76405ca6450e12f900fc914",
+        "0x59b5b5a60798cf2e65543fac94283eb87f09551966a0bfa097516ac428cb5dc",
       abi: [
         {
           type: "impl",
@@ -1542,7 +1542,7 @@ const deployedContracts = {
     },
     KibiBank: {
       address:
-        "0x77c2bc93b696a2c0ced5de2e75c78e43495aa2f45f03c89ec87577e482a90a9",
+        "0x44b07bbf652b04237209a4b02cedab78e2b6373dad44b8aef45abf3713f18f4",
       abi: [
         {
           type: "impl",
@@ -1982,7 +1982,7 @@ const deployedContracts = {
     },
     PuzzleGame: {
       address:
-        "0x7ed38e7fe3c2e8a0b1e7afd0ccd6cd5bccdf0194a8b9868a0dbee89f5498745",
+        "0x36ca2773d728b9524bf07bbcf5ac608415c96a97fdd280ced12bba2ba8bc973",
       abi: [
         {
           type: "impl",
@@ -2130,7 +2130,7 @@ const deployedContracts = {
                   type: "core::felt252",
                 },
                 {
-                  name: "solution_letter",
+                  name: "solution",
                   type: "core::felt252",
                 },
                 {
@@ -2393,7 +2393,7 @@ const deployedContracts = {
             {
               name: "solution_commitment",
               type: "core::felt252",
-              kind: "data",
+              kind: "key",
             },
             {
               name: "difficulty_level",
@@ -2415,12 +2415,12 @@ const deployedContracts = {
             {
               name: "puzzle_id",
               type: "core::felt252",
-              kind: "data",
+              kind: "key",
             },
             {
               name: "solver",
               type: "core::starknet::contract_address::ContractAddress",
-              kind: "data",
+              kind: "key",
             },
             {
               name: "reward_amount",
@@ -2463,7 +2463,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x2e0d2a8cf26090e8c377ded0382c2581a588a47b1d69d86f40fdbbacb184489",
+        "0x132125c0f17e44991a059b63a6768bb28ac24a55fdcf25912af5bcb27922755",
     },
   },
 } as const;

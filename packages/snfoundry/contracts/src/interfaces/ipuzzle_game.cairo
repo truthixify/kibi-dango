@@ -45,6 +45,7 @@ pub trait IPuzzleGame<TContractState> {
     /// - Increments puzzle ID counter
     fn create_puzzle(
         ref self: TContractState,
+        puzzle_id: felt252,
         solution_commitment: felt252,
         difficulty_level: Difficulty,
         bounty_amount: u256,
@@ -77,16 +78,6 @@ pub trait IPuzzleGame<TContractState> {
     /// - Only callable by the contract owner
     /// - Used to establish the connection with the achievement NFT contract
     fn set_pirate_nft(ref self: TContractState, pirate_nft: ContractAddress);
-
-    /// Get the next available puzzle ID.
-    ///
-    /// # Returns
-    /// - `felt252`: The next puzzle ID that will be assigned to a new puzzle
-    ///
-    /// # Usage
-    /// - Used by frontend applications to track puzzle creation
-    /// - Helps determine the total number of puzzles created
-    fn get_next_puzzle_id(self: @TContractState) -> felt252;
 
     /// Retrieve puzzle data by ID.
     ///

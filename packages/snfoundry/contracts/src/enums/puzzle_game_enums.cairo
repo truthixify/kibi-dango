@@ -35,7 +35,7 @@
 //! - Control who can solve puzzles
 //! - Calculate rewards and progression
 
-#[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
+#[derive(Copy, Drop, Serde, PartialEq, Default, starknet::Store)]
 pub enum Difficulty {
     #[default]
     AI, // System-generated puzzle - assigned to specific players

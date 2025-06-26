@@ -35,7 +35,7 @@ use crate::enums::puzzle_game_enums::Difficulty;
 //! - Supports equality comparisons
 //! - Used in event emissions for tracking
 
-#[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
+#[derive(Copy, Drop, Serde, PartialEq, Default, starknet::Store)]
 pub struct Reward {
     pub bounty_amount: u256, // Number of KIBI tokens awarded for solving
     pub difficulty_level: Difficulty // Difficulty level affecting reward structure
@@ -76,7 +76,7 @@ pub struct Reward {
 //! - Supports equality comparisons
 //! - Used in event emissions and state queries
 
-#[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
+#[derive(Copy, Drop, Serde, PartialEq, Default, starknet::Store)]
 pub struct Puzzle {
     pub solution_commitment: felt252, // Cryptographic commitment of the solution
     pub reward: Reward, // Reward configuration for the puzzle

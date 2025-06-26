@@ -13,13 +13,12 @@ use contracts::kibi_bank::KibiBank;
 use contracts::puzzle_game::PuzzleGame;
 use contracts::structs::kibi_bank_structs::DepositInfo;
 use contracts::structs::puzzle_game_structs::{Puzzle, Reward};
-use core::felt252_div;
 use core::poseidon::poseidon_hash_span;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin::token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, get_class_hash,
-    spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, generate_random_felt,
+    get_class_hash, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
 };
 use starknet::{ClassHash, ContractAddress};
 
@@ -382,7 +381,7 @@ fn test_deposit_for_puzzle_and_release_bounty() {
     };
     let mut spy_events = spy_events();
     let amount = 1000;
-    let puzzle_id = 0;
+    let puzzle_id = generate_random_felt();
 
     start_cheat_caller_address(kibi_token_erc20_dispatcher.contract_address, USER);
 
@@ -468,6 +467,7 @@ fn test_puzzle_created_by_ai() {
         contract_address: pirate_nft.contract_address,
     };
     let mut spy_events = spy_events();
+    let puzzle_id = generate_random_felt();
 
     // Set up puzzle parameters for AI puzzle
     let puzzle_secret = 'RAFTEL';
@@ -475,7 +475,6 @@ fn test_puzzle_created_by_ai() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let bounty_amount = 1000; // AI puzzle bounty
     let difficulty_level = Difficulty::AI;
-    let previous_puzzle_id = puzzle_game.get_next_puzzle_id();
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -491,10 +490,9 @@ fn test_puzzle_created_by_ai() {
     );
 
     // Create the AI puzzle (assigned to USER)
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Verify puzzle creation and ID increment
-    let next_puzzle_id = puzzle_game.get_next_puzzle_id();
     let expected_reward = Reward { bounty_amount, difficulty_level };
     let expected_puzzle = Puzzle {
         solution_commitment,
@@ -504,10 +502,8 @@ fn test_puzzle_created_by_ai() {
         solver: None,
         assigned_player: Some(USER) // AI puzzles are assigned to specific players
     };
-    let puzzle = puzzle_game.get_puzzle(previous_puzzle_id);
+    let puzzle = puzzle_game.get_puzzle(puzzle_id);
 
-    // Verify puzzle ID increment and puzzle state
-    assert(previous_puzzle_id + 1 == next_puzzle_id, 'Invalid puzzle id');
     assert(puzzle == expected_puzzle, 'Invalid puzzle');
 
     // Verify that PuzzleCreated event was emitted correctly
@@ -518,7 +514,7 @@ fn test_puzzle_created_by_ai() {
                     puzzle_game.contract_address,
                     PuzzleGame::Event::PuzzleCreated(
                         PuzzleCreated {
-                            puzzle_id: previous_puzzle_id,
+                            puzzle_id,
                             creator: None, // AI puzzles have no creator
                             solution_commitment,
                             difficulty_level,
@@ -532,11 +528,11 @@ fn test_puzzle_created_by_ai() {
     // Now solve the puzzle with the assigned player (USER)
     let user_kibi_token_balance_before = kibi_token_erc20_dispatcher.balance_of(USER);
 
-    puzzle_game.submit_solution(previous_puzzle_id, puzzle_secret, salt);
+    puzzle_game.submit_solution(puzzle_id, puzzle_secret, salt);
 
     // Verify puzzle solution and rewards
     let expected_updated_puzzle = Puzzle { solved: true, solver: Some(USER), ..expected_puzzle };
-    let updated_puzzle = puzzle_game.get_puzzle(previous_puzzle_id);
+    let updated_puzzle = puzzle_game.get_puzzle(puzzle_id);
     let user_kibi_token_balance_after = kibi_token_erc20_dispatcher.balance_of(USER);
     let user_pirate_nft_balance_after = pirate_nft_erc721_dispatcher.balance_of(USER);
     let user_nft_token_id = pirate_nft.get_token_id_of_player(USER);
@@ -563,10 +559,7 @@ fn test_puzzle_created_by_ai() {
                     puzzle_game.contract_address,
                     PuzzleGame::Event::PuzzleSolved(
                         PuzzleSolved {
-                            puzzle_id: previous_puzzle_id,
-                            solver: USER,
-                            difficulty_level,
-                            reward_amount: bounty_amount,
+                            puzzle_id, solver: USER, difficulty_level, reward_amount: bounty_amount,
                         },
                     ),
                 ),
@@ -594,7 +587,7 @@ fn test_puzzle_created_by_user() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let bounty_amount = 3500; // User puzzle - Easy difficulty
     let difficulty_level = Difficulty::Easy;
-    let previous_puzzle_id = puzzle_game.get_next_puzzle_id();
+    let puzzle_id = generate_random_felt();
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -608,10 +601,9 @@ fn test_puzzle_created_by_user() {
     );
 
     // Create the user puzzle (created by OTHER_USER)
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
-    // Verify puzzle creation and ID increment
-    let next_puzzle_id = puzzle_game.get_next_puzzle_id();
+    // Verify puzzle creation
     let expected_reward = Reward { bounty_amount, difficulty_level };
     let expected_puzzle = Puzzle {
         solution_commitment,
@@ -621,10 +613,9 @@ fn test_puzzle_created_by_user() {
         solver: None,
         assigned_player: None // User puzzles are not assigned to specific players
     };
-    let puzzle = puzzle_game.get_puzzle(previous_puzzle_id);
+    let puzzle = puzzle_game.get_puzzle(puzzle_id);
 
     // Verify puzzle ID increment and puzzle state
-    assert(previous_puzzle_id + 1 == next_puzzle_id, 'Invalid puzzle id');
     assert(puzzle == expected_puzzle, 'Invalid puzzle');
 
     // Verify that PuzzleCreated event was emitted correctly
@@ -635,7 +626,7 @@ fn test_puzzle_created_by_user() {
                     puzzle_game.contract_address,
                     PuzzleGame::Event::PuzzleCreated(
                         PuzzleCreated {
-                            puzzle_id: previous_puzzle_id,
+                            puzzle_id,
                             creator: Some(OTHER_USER), // User puzzles have a creator
                             solution_commitment,
                             difficulty_level,
@@ -651,11 +642,11 @@ fn test_puzzle_created_by_user() {
 
     start_cheat_caller_address(puzzle_game.contract_address, USER);
 
-    puzzle_game.submit_solution(previous_puzzle_id, puzzle_secret, salt);
+    puzzle_game.submit_solution(puzzle_id, puzzle_secret, salt);
 
     // Verify puzzle solution and rewards
     let expected_updated_puzzle = Puzzle { solved: true, solver: Some(USER), ..expected_puzzle };
-    let updated_puzzle = puzzle_game.get_puzzle(previous_puzzle_id);
+    let updated_puzzle = puzzle_game.get_puzzle(puzzle_id);
     let user_kibi_token_balance_after = kibi_token_erc20_dispatcher.balance_of(USER);
     let user_pirate_nft_balance_after = pirate_nft_erc721_dispatcher.balance_of(USER);
     let user_nft_token_id = pirate_nft.get_token_id_of_player(USER);
@@ -682,10 +673,7 @@ fn test_puzzle_created_by_user() {
                     puzzle_game.contract_address,
                     PuzzleGame::Event::PuzzleSolved(
                         PuzzleSolved {
-                            puzzle_id: previous_puzzle_id,
-                            solver: USER,
-                            difficulty_level,
-                            reward_amount: bounty_amount,
+                            puzzle_id, solver: USER, difficulty_level, reward_amount: bounty_amount,
                         },
                     ),
                 ),
@@ -710,6 +698,7 @@ fn test_weighted_solved_count_ai_puzzle() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::AI;
     let bounty_amount = 1000;
+    let puzzle_id = generate_random_felt();
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -725,9 +714,8 @@ fn test_weighted_solved_count_ai_puzzle() {
     );
 
     // Create the AI puzzle (assigned to USER)
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
 
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Solve the puzzle with the assigned player (USER)
     puzzle_game.submit_solution(puzzle_id, puzzle_secret, salt);
@@ -757,6 +745,7 @@ fn test_weighted_solved_count_easy_puzzle() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::Easy;
     let bounty_amount = 3200;
+    let puzzle_id = generate_random_felt();
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -770,8 +759,7 @@ fn test_weighted_solved_count_easy_puzzle() {
     );
 
     // Create the Easy puzzle (created by OTHER_USER, anyone can solve)
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Solve the puzzle with a different user (USER)
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -802,6 +790,7 @@ fn test_weighted_solved_count_medium_puzzle() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::Medium;
     let bounty_amount = 5400;
+    let puzzle_id = generate_random_felt();
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -815,8 +804,7 @@ fn test_weighted_solved_count_medium_puzzle() {
     );
 
     // Create the Medium puzzle (created by OTHER_USER, anyone can solve)
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Solve the puzzle with a different user (USER)
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -850,7 +838,7 @@ fn test_weighted_solved_count_hard_puzzle() {
     let bounty_amount = 10000;
 
     // Set up authorization for cross-contract calls
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
+    let puzzle_id = generate_random_felt();
 
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
@@ -863,7 +851,7 @@ fn test_weighted_solved_count_hard_puzzle() {
     );
 
     // Create the Hard puzzle (created by OTHER_USER, anyone can solve)
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Solve the puzzle with a different user (USER)
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -902,7 +890,7 @@ fn test_cumulative_weighted_solved_count() {
         ('HARD_PUZZLE', 444444, Difficulty::Hard, 35000) // weight 7
     ];
     let mut expected_total = 0;
-    let mut puzzle_id = puzzle_game.get_next_puzzle_id();
+    let mut puzzle_id = generate_random_felt();
     let puzzle_game_balance = kibi_token_erc20_dispatcher.balance_of(puzzle_game.contract_address);
     let other_user_balance = kibi_token_erc20_dispatcher.balance_of(OTHER_USER);
 
@@ -931,7 +919,7 @@ fn test_cumulative_weighted_solved_count() {
                     kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
                 );
 
-                puzzle_game.create_puzzle(solution_commitment, difficulty, bounty);
+                puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty, bounty);
 
                 // Determine solver based on puzzle type
                 // AI puzzles are solved by OTHER_USER (assigned player)
@@ -953,7 +941,7 @@ fn test_cumulative_weighted_solved_count() {
                     Difficulty::Hard => 7,
                 };
 
-                puzzle_id += 1;
+                puzzle_id = generate_random_felt();
             },
             None => { break; },
         }
@@ -1003,7 +991,7 @@ fn test_rank_progression_with_weights() {
         let secret = 'EASY_{}' + i.into();
         let salt: felt252 = 100000 + i.into();
         let solution_commitment = poseidon_hash_span([secret, salt].span());
-        let puzzle_id = puzzle_game.get_next_puzzle_id();
+        let puzzle_id = generate_random_felt();
         let bounty_amount = 4700;
 
         start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
@@ -1016,7 +1004,7 @@ fn test_rank_progression_with_weights() {
         );
 
         // Create the Easy puzzle (created by OTHER_USER)
-        puzzle_game.create_puzzle(solution_commitment, Difficulty::Easy, bounty_amount);
+        puzzle_game.create_puzzle(puzzle_id, solution_commitment, Difficulty::Easy, bounty_amount);
 
         // Solve the puzzle with USER
         start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -1032,7 +1020,7 @@ fn test_rank_progression_with_weights() {
     let secret = 'EASY_3';
     let salt: felt252 = 100003;
     let solution_commitment = poseidon_hash_span([secret, salt].span());
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
+    let puzzle_id = generate_random_felt();
     let bounty_amount = 3200;
 
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
@@ -1045,7 +1033,7 @@ fn test_rank_progression_with_weights() {
     );
 
     // Create and solve the 4th Easy puzzle
-    puzzle_game.create_puzzle(solution_commitment, Difficulty::Easy, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, Difficulty::Easy, bounty_amount);
 
     start_cheat_caller_address(puzzle_game.contract_address, USER);
 
@@ -1073,7 +1061,7 @@ fn test_user_puzzle_anyone_can_solve() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::Easy;
     let bounty_amount = 3200;
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
+    let puzzle_id = generate_random_felt();
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -1087,7 +1075,7 @@ fn test_user_puzzle_anyone_can_solve() {
     );
 
     // Create the user puzzle (OTHER_USER is the creator)
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Solve with different user (USER) - should succeed because user puzzles are open to anyone
     start_cheat_caller_address(puzzle_game.contract_address, USER);
@@ -1099,35 +1087,6 @@ fn test_user_puzzle_anyone_can_solve() {
     let solved_count = pirate_nft.get_solved_count(token_id);
 
     assert!(solved_count == 3, "User should get weight 3 for solving Easy puzzle");
-}
-
-// Test puzzle ID increment functionality
-// Verifies that puzzle IDs are properly incremented when new puzzles are created
-#[test]
-fn test_puzzle_id_increment() {
-    // Deploy the complete ecosystem
-    let (_, _, _, puzzle_game) = deploy_puzzle_game();
-
-    // Set up authorization for puzzle creation
-    start_cheat_caller_address(puzzle_game.contract_address, USER);
-
-    // Check initial puzzle ID (should start at 0)
-    let initial_puzzle_id = puzzle_game.get_next_puzzle_id();
-    assert(initial_puzzle_id == 0, 'Initial puzzle ID should be 0');
-
-    // Set up puzzle parameters for testing
-    let puzzle_secret = 'TEST_PUZZLE';
-    let salt: felt252 = 123456;
-    let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
-    let difficulty_level = Difficulty::AI;
-    let bounty_amount = 1000;
-
-    // Create the puzzle (this should increment the puzzle ID)
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
-
-    // Verify that puzzle ID has been incremented by 1
-    let next_puzzle_id = puzzle_game.get_next_puzzle_id();
-    assert(next_puzzle_id == initial_puzzle_id + 1, 'Puzzle ID should increment by 1');
 }
 
 // Test multi-player puzzle solving scenarios
@@ -1150,8 +1109,8 @@ fn test_multiple_players_solving_different_puzzles() {
         ('PUZZLE_2', 222222, Difficulty::Medium, 25000),
         ('PUZZLE_3', 333333, Difficulty::Hard, 35000),
     ];
-
-    let mut puzzle_id = puzzle_game.get_next_puzzle_id();
+    let mut puzzle_id = generate_random_felt();
+    let mut i: u8 = 0;
 
     // Process each puzzle with alternating creators and solvers
     loop {
@@ -1160,7 +1119,7 @@ fn test_multiple_players_solving_different_puzzles() {
                 secret, salt, difficulty, bounty,
             )) => {
                 // Alternate puzzle creation between users for variety
-                let creator = if felt252_div(puzzle_id, 2) == 0 {
+                let creator = if i % 2 == 0 {
                     OTHER_USER
                 } else {
                     USER
@@ -1179,10 +1138,10 @@ fn test_multiple_players_solving_different_puzzles() {
                     kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
                 );
 
-                puzzle_game.create_puzzle(solution_commitment, difficulty, bounty);
+                puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty, bounty);
 
                 // Alternate puzzle solving between users for fair distribution
-                let solver = if felt252_div(puzzle_id, 2) == 0 {
+                let solver = if i % 2 == 0 {
                     USER
                 } else {
                     OTHER_USER
@@ -1193,7 +1152,8 @@ fn test_multiple_players_solving_different_puzzles() {
                 // Solve the puzzle with the designated solver
                 puzzle_game.submit_solution(puzzle_id, secret, salt);
 
-                puzzle_id += 1;
+                puzzle_id = generate_random_felt();
+                i += 1;
             },
             None => { break; },
         }
@@ -1226,7 +1186,7 @@ fn test_ai_puzzle_reward_rank_multiplier() {
     let ai_commitment_1 = poseidon_hash_span([ai_secret_1, ai_salt_1].span());
     let ai_bounty = 1000;
     let ai_difficulty = Difficulty::AI;
-    let ai_puzzle_id_1 = puzzle_game.get_next_puzzle_id();
+    let initial_puzzle_id = generate_random_felt();
 
     // Set up authorization for cross-contract calls
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -1242,11 +1202,11 @@ fn test_ai_puzzle_reward_rank_multiplier() {
     );
 
     // Create and solve the AI puzzle
-    puzzle_game.create_puzzle(ai_commitment_1, ai_difficulty, ai_bounty);
+    puzzle_game.create_puzzle(initial_puzzle_id, ai_commitment_1, ai_difficulty, ai_bounty);
 
     let user_balance_before = kibi_token_erc20_dispatcher.balance_of(USER);
 
-    puzzle_game.submit_solution(ai_puzzle_id_1, ai_secret_1, ai_salt_1);
+    puzzle_game.submit_solution(initial_puzzle_id, ai_secret_1, ai_salt_1);
 
     let user_balance_after = kibi_token_erc20_dispatcher.balance_of(USER);
 
@@ -1259,8 +1219,8 @@ fn test_ai_puzzle_reward_rank_multiplier() {
         let secret = 'EASY_RANKUP_{}' + i.into();
         let salt: felt252 = 200000 + i.into();
         let commitment = poseidon_hash_span([secret, salt].span());
-        let puzzle_id = puzzle_game.get_next_puzzle_id();
         let bounty_amount = 7000;
+        let puzzle_id = generate_random_felt();
 
         // Create as OTHER_USER, solve as USER
         start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
@@ -1272,7 +1232,7 @@ fn test_ai_puzzle_reward_rank_multiplier() {
             kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
         );
 
-        puzzle_game.create_puzzle(commitment, Difficulty::Hard, bounty_amount);
+        puzzle_game.create_puzzle(puzzle_id, commitment, Difficulty::Hard, bounty_amount);
 
         start_cheat_caller_address(puzzle_game.contract_address, USER);
 
@@ -1290,7 +1250,7 @@ fn test_ai_puzzle_reward_rank_multiplier() {
     let ai_secret_2 = 'AI_PUZZLE_2';
     let ai_salt_2: felt252 = 222222;
     let ai_commitment_2 = poseidon_hash_span([ai_secret_2, ai_salt_2].span());
-    let ai_puzzle_id_2 = puzzle_game.get_next_puzzle_id();
+    let ai_puzzle_id_2 = generate_random_felt();
     let rank_multiplier = 2;
 
     // Create and solve as USER
@@ -1305,7 +1265,7 @@ fn test_ai_puzzle_reward_rank_multiplier() {
         kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
     );
 
-    puzzle_game.create_puzzle(ai_commitment_2, ai_difficulty, ai_bounty);
+    puzzle_game.create_puzzle(ai_puzzle_id_2, ai_commitment_2, ai_difficulty, ai_bounty);
 
     let user_balance_before_2 = kibi_token_erc20_dispatcher.balance_of(USER);
 
@@ -1337,9 +1297,11 @@ fn test_insufficient_bounty_easy() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::Easy;
     let insufficient_bounty = 2000; // Below minimum of 3000
+    let puzzle_id = generate_random_felt();
 
     // This should panic due to insufficient bounty
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, insufficient_bounty);
+    puzzle_game
+        .create_puzzle(puzzle_id, solution_commitment, difficulty_level, insufficient_bounty);
 }
 
 // Test failure scenarios for insufficient bounty on Medium puzzles
@@ -1358,9 +1320,11 @@ fn test_insufficient_bounty_medium() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::Medium;
     let insufficient_bounty = 3000; // Below minimum of 5000
+    let puzzle_id = generate_random_felt();
 
     // This should panic due to insufficient bounty
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, insufficient_bounty);
+    puzzle_game
+        .create_puzzle(puzzle_id, solution_commitment, difficulty_level, insufficient_bounty);
 }
 
 // Test failure scenarios for insufficient bounty on Hard puzzles
@@ -1379,9 +1343,11 @@ fn test_insufficient_bounty_hard() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::Hard;
     let insufficient_bounty = 5000; // Below minimum of 7000
+    let puzzle_id = generate_random_felt();
 
     // This should panic due to insufficient bounty
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, insufficient_bounty);
+    puzzle_game
+        .create_puzzle(puzzle_id, solution_commitment, difficulty_level, insufficient_bounty);
 }
 
 // Test failure scenario for incorrect solution submission
@@ -1401,9 +1367,9 @@ fn test_incorrect_solution() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::AI;
     let bounty_amount = 1000;
+    let puzzle_id = generate_random_felt();
 
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Try to solve with incorrect solution - should panic
     let wrong_secret = 'WRONG_SECRET';
@@ -1426,7 +1392,7 @@ fn test_solve_already_solved_puzzle() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::AI;
     let bounty_amount = 1000;
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
+    let puzzle_id = generate_random_felt();
 
     // Set up authorization for puzzle creation and solving
     start_cheat_caller_address(pirate_nft.contract_address, puzzle_game.contract_address);
@@ -1441,7 +1407,7 @@ fn test_solve_already_solved_puzzle() {
         kibi_token_erc20_dispatcher.contract_address, kibi_bank.contract_address,
     );
 
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
     puzzle_game.submit_solution(puzzle_id, puzzle_secret, salt);
 
     // Try to solve the same puzzle again - should panic
@@ -1465,9 +1431,9 @@ fn test_wrong_player_solve_ai_puzzle() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, salt].span());
     let difficulty_level = Difficulty::AI;
     let bounty_amount = 1000;
+    let puzzle_id = generate_random_felt();
 
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Try to solve with wrong player (OTHER_USER) - should panic
     start_cheat_caller_address(puzzle_game.contract_address, OTHER_USER);
@@ -1571,9 +1537,9 @@ fn test_wrong_salt_solution() {
     let solution_commitment = poseidon_hash_span([puzzle_secret, correct_salt].span());
     let difficulty_level = Difficulty::AI;
     let bounty_amount = 1000;
+    let puzzle_id = generate_random_felt();
 
-    let puzzle_id = puzzle_game.get_next_puzzle_id();
-    puzzle_game.create_puzzle(solution_commitment, difficulty_level, bounty_amount);
+    puzzle_game.create_puzzle(puzzle_id, solution_commitment, difficulty_level, bounty_amount);
 
     // Try to solve with wrong salt - should panic
     let wrong_salt: felt252 = 654321;

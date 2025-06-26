@@ -90,8 +90,6 @@ pub mod PuzzleGame {
         min_bounty_hard: u256,
         /// Fixed reward amount for AI-generated puzzles
         ai_reward: u256,
-        /// Next available puzzle ID for creation
-        next_puzzle_id: felt252,
     }
 
     /// Constructor - called when the contract is deployed
@@ -127,8 +125,6 @@ pub mod PuzzleGame {
         self.min_bounty_hard.write(min_bounty_hard);
         // Store the fixed AI reward amount
         self.ai_reward.write(ai_reward);
-        // Initialize the puzzle ID counter
-        self.next_puzzle_id.write(0);
     }
 
     // Custom implementation for PuzzleGame-specific functionality
@@ -147,10 +143,16 @@ pub mod PuzzleGame {
         /// - Stores puzzle data and emits event
         fn create_puzzle(
             ref self: ContractState,
+            puzzle_id: felt252,
             solution_commitment: felt252, // Cryptographic commitment of the solution
             difficulty_level: Difficulty, // Difficulty level of the puzzle
             bounty_amount: u256 // Reward amount for solving the puzzle
         ) {
+            let puzzle = self.puzzles.entry(puzzle_id).read();
+            let default_puzzle: Puzzle = Default::default();
+
+            assert(puzzle == default_puzzle, 'puzzle already exists');
+
             // Enforce minimum bounty based on difficulty level
             let min_bounty = match difficulty_level {
                 Difficulty::AI => self.ai_reward.read(),
@@ -173,9 +175,6 @@ pub mod PuzzleGame {
                     None, Some(get_caller_address()),
                 ) // User puzzles have a creator but no assigned player
             };
-
-            // Get the next available puzzle ID
-            let puzzle_id = self.next_puzzle_id.read();
 
             let kibi_bank = IKibiBankDispatcher { contract_address: self.kibi_bank.read() };
 
@@ -215,9 +214,6 @@ pub mod PuzzleGame {
                         assigned_player,
                     },
                 );
-
-            // Increment the puzzle ID counter for the next puzzle
-            self.next_puzzle_id.write(puzzle_id + 1);
 
             // Emit the PuzzleCreated event for off-chain tracking
             self
@@ -313,11 +309,6 @@ pub mod PuzzleGame {
         fn set_kibi_bank(ref self: ContractState, kibi_bank: ContractAddress) {
             self.ownable.assert_only_owner();
             self.kibi_bank.write(kibi_bank);
-        }
-
-        // Get the next available puzzle ID
-        fn get_next_puzzle_id(self: @ContractState) -> felt252 {
-            self.next_puzzle_id.read()
         }
 
         // Get puzzle data by ID
