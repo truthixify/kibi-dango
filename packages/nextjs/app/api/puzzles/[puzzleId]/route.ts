@@ -32,8 +32,6 @@ export async function PUT(req: Request) {
         await connectDB()
         const { puzzleId, solver } = await req.json()
 
-        console.log('PUT request received with data:', { puzzleId, solver })
-
         if (!puzzleId || !solver) {
             return Response.json(
                 { error: 'Puzzle ID, solver, and solved status are required' },

@@ -59,7 +59,6 @@ export default function CreatePage() {
 
         try {
             const tx = await kibiToken.approve(kibiBank?.address, BigInt(bountyAmount))
-            console.log('Approval Tx:', tx)
             setIsApproved(true)
         } catch (err: any) {
             console.error(err)
@@ -119,12 +118,12 @@ export default function CreatePage() {
                 const difficultyLevel = new CairoCustomEnum({
                     [difficulty]: {},
                 })
-                console.log(difficultyLevel)
+
                 const tx = await puzzleGame.create_puzzle(
                     puzzleId,
                     BigInt(solutionHash),
                     difficultyLevel,
-                    BigInt(bountyAmount)
+                    BigInt(bountyAmount * 1e18), // Assuming $KIBI has 18 decimals
                 )
 
                 await createPuzzle(
@@ -249,10 +248,11 @@ export default function CreatePage() {
                                                 required
                                                 disabled={isSubmitting}
                                             >
-                                                <SelectTrigger className="h-16 border-2 border-green-200 text-lg focus:border-green-400">
+                                                <SelectTrigger className="h-16 border-2 border-green-200 text-lg focus:border-green-400 bg-base-300">
                                                     <SelectValue placeholder="Select difficulty" />
                                                 </SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent
+                                                className='bg-base-300'>
                                                     <SelectItem value="Easy">
                                                         🟢 Easy — 3000 $KIBI+
                                                     </SelectItem>
@@ -269,7 +269,7 @@ export default function CreatePage() {
 
                                     <div>
                                         <label className="mb-2 block text-lg font-medium text-gray-700">
-                                            Hint (Optional)
+                                            Hint
                                         </label>
                                         <Input
                                             type="text"

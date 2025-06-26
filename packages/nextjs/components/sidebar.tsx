@@ -81,7 +81,7 @@ export function Sidebar() {
             try {
                 const tokenId = await pirateNFT.get_token_id_of_player(address)
                 const kibiEarned = await puzzleGame.get_kibi_earned(address)
-                setKibiEarned(Number(kibiEarned))
+                setKibiEarned(Number(kibiEarned) / 1e18) // Convert from wei to Kibi
                 const userSolveCount = Number(await pirateNFT.get_solved_count(tokenId))
                 setSolveCount(userSolveCount)
 
@@ -192,7 +192,7 @@ export function Sidebar() {
                                     <span className="text-subheading text-sm">Kibi Earned</span>
                                 </div>
                                 <span className="text-heading font-semibold">
-                                    {kibiEarned !== null ? kibiEarned : '--'}
+                                    {kibiEarned !== null ? kibiEarned.toFixed(2) : '--'}
                                 </span>
                             </div>
                         </div>

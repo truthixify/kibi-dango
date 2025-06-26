@@ -54,7 +54,6 @@ export async function GET(req: Request) {
             .replace(/^```json\s*/i, '')
             .replace(/^```\s*/i, '')
             .replace(/```$/, '')
-        console.log('Parsed AI response:', jsonResponse)
 
         let parsed
         try {

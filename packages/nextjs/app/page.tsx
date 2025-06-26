@@ -54,7 +54,7 @@ export default function DailyPuzzlePage() {
                 puzzleId,
                 BigInt(puzzle?.solutionHash),
                 difficulty_level,
-                BigInt(1000)
+                BigInt(1000 * 1e18), // 1000 tokens
             )
 
             const newPuzzle = await createAIDailyPuzzle(
@@ -104,7 +104,6 @@ export default function DailyPuzzlePage() {
                     setShowSuccess(true)
                 }
             }
-            console.log('Transaction submitted:', tx)
         } catch (error) {
             setShowFailure(true)
             console.error('Failed to submit puzzle solution:', error)

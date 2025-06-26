@@ -219,7 +219,6 @@ export const getASinglePuzzle = async (puzzleId: string) => {
 }
 
 export const markPuzzleSolved = async (solver: string, puzzleId: string) => {
-    console.log('markPuzzleSolved called with:', { solver, puzzleId })
     try {
         const res = await fetch(`/api/puzzles/${puzzleId}`, {
             method: 'PUT',

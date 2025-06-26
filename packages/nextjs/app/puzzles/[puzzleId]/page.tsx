@@ -41,11 +41,9 @@ export default function PuzzleDetailPage() {
 
     useEffectOnce(() => {
         const fetchPuzzle = async () => {
-            console.log('Fetching puzzle with ID:', puzzleId)
             if (!puzzleId) return
             try {
                 const puzzle = await getASinglePuzzle(puzzleId)
-                console.log('Fetched puzzle:', puzzle)
                 setPuzzle(puzzle)
             } catch (err) {
                 console.error('Error loading puzzle:', err)

@@ -97,7 +97,7 @@ export default function DashboardPage() {
             try {
                 const tokenId = await pirateNFT.get_token_id_of_player(address)
                 const kibiEarned = await puzzleGame.get_kibi_earned(address)
-                setKibiEarned(Number(kibiEarned))
+                setKibiEarned(Number(kibiEarned) / 1e18) // Convert from wei to Kibii
                 const userSolveCount = Number(await pirateNFT.get_solved_count(tokenId))
                 setSolveCount(userSolveCount)
 
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                                     <div className="flex items-center gap-2">
                                         <Coins className="h-4 w-4 text-warning" />
                                         <span className="text-heading text-xl font-semibold">
-                                            {kibiEarned}
+                                            {kibiEarned.toFixed(2)}
                                         </span>
                                     </div>
                                 </div>
