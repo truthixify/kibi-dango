@@ -9,11 +9,12 @@ import { getAllPuzzles } from '~~/lib/api'
 interface Puzzle {
     id: string
     puzzleId: string
-    title: string
+    question: string
     difficulty: 'Easy' | 'Medium' | 'Hard'
     hint: string
     creator: string
     createdAt: string
+    solved: boolean
 }
 
 export default function AllPuzzlesPage() {
@@ -24,7 +25,7 @@ export default function AllPuzzlesPage() {
         const fetchPuzzles = async () => {
             try {
                 const puzzles = await getAllPuzzles()
-                setPuzzles(puzzles)
+                setPuzzles(puzzles.filter((puzzle: any) => !puzzle.solved))
             } catch (err) {
                 console.error('Failed to load puzzles:', err)
             } finally {
@@ -49,16 +50,16 @@ export default function AllPuzzlesPage() {
             ) : puzzles.length === 0 ? (
                 <p className="text-subheading text-center">No puzzles have been posted yet.</p>
             ) : (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="m-4 grid grid-cols-1 gap-6 rounded-lg bg-base-100 shadow-md md:grid-cols-2 lg:grid-cols-3">
                     {puzzles.map(puzzle => (
                         <Link
-                            key={puzzle.id}
-                            href={`/puzzle/${puzzle.puzzleId}`}
+                            key={puzzle.puzzleId}
+                            href={`/puzzles/${puzzle.puzzleId}`}
                             className="no-underline"
                         >
                             <Card className="hover-lift cursor-pointer transition-shadow">
                                 <CardHeader>
-                                    <CardTitle className="text-xl">{puzzle.title}</CardTitle>
+                                    <CardTitle className="text-xl">{puzzle.question}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-muted text-sm">
@@ -66,7 +67,7 @@ export default function AllPuzzlesPage() {
                                     </p>
                                     <p className="text-muted text-sm">💡 Hint: {puzzle.hint}</p>
                                     <p className="mt-2 text-xs text-gray-500">
-                                        🧑‍💻 Posted by {puzzle.creator.slice(0, 6)}... on{' '}
+                                        🧑‍💻 Posted by {puzzle.creator}... on{' '}
                                         {new Date(puzzle.createdAt).toLocaleDateString()}
                                     </p>
                                 </CardContent>

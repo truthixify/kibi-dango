@@ -3,9 +3,10 @@
 interface SuccessProps {
     text: string
     earning: number
+    onClose: () => void
 }
 
-export function Success({ text, earning }: SuccessProps) {
+export function Success({ text, earning, onClose }: SuccessProps) {
     return (
         <div className="backdrop-minimal fixed inset-0 z-50 flex items-center justify-center">
             <div className="minimal-card shadow-medium mx-4 max-w-sm rounded-lg border-success bg-white p-8 text-center">
@@ -16,7 +17,7 @@ export function Success({ text, earning }: SuccessProps) {
                 <h3 className="text-heading mb-2 text-lg">Correct!</h3>
                 <p className="text-body mb-4 text-sm">{text}</p>
 
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div className="mb-2 flex items-center justify-center space-x-3">
                         <span className="text-lg">🧩</span>
                         <span className="text-gray-400">→</span>
@@ -24,6 +25,13 @@ export function Success({ text, earning }: SuccessProps) {
                     </div>
                     <p className="font-semibold text-success">{earning} Tokens Earned!</p>
                 </div>
+
+                <button
+                    onClick={onClose}
+                    className="bg-success mt-2 px-4 py-2 text-sm text-white hover:bg-success-dark rounded transition-colors"
+                >
+                    Close
+                </button>
             </div>
         </div>
     )

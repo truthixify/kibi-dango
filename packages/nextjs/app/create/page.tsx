@@ -25,18 +25,20 @@ export default function CreatePage() {
     const [hint, setHint] = useState('')
     const [bountyAmount, setBountyAmount] = useState(0)
     const [solution, setSolution] = useState('')
-    const [difficulty, setDifficulty] = useState('')
+    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Easy')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
+    const [isApproved, setIsApproved] = useState(false)
     const { data: puzzleGame } = useScaffoldContract({ contractName: 'PuzzleGame' })
+    const { data: kibiToken } = useScaffoldContract({ contractName: 'KibiToken' })
+    const { data: kibiBank } = useScaffoldContract({ contractName: 'KibiBank' })
     const { address } = useAccount()
 
     const MIN_BOUNTY_AMOUNT = {
-        easy: 3000,
-        medium: 5000,
-        hard: 7000,
-        expert: 7000,
+        Easy: 3000,
+        Medium: 5000,
+        Hard: 7000,
     }
 
     const validateBountyAmount = useCallback(() => {
@@ -44,6 +46,28 @@ export default function CreatePage() {
         const minBounty = MIN_BOUNTY_AMOUNT[difficulty as keyof typeof MIN_BOUNTY_AMOUNT]
         return bountyAmount >= minBounty
     }, [bountyAmount, difficulty])
+
+    const handleApprove = useCallback(async () => {
+        setError(null)
+        setIsSubmitting(true)
+
+        if (!address || !kibiToken || !puzzleGame) {
+            setError('Wallet not connected or contracts not available')
+            setIsSubmitting(false)
+            return
+        }
+
+        try {
+            const tx = await kibiToken.approve(kibiBank?.address, BigInt(bountyAmount))
+            console.log('Approval Tx:', tx)
+            setIsApproved(true)
+        } catch (err: any) {
+            console.error(err)
+            setError('Approval failed. Please try again.')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }, [address, bountyAmount, kibiToken, puzzleGame])
 
     const handleCreatePuzzle = useCallback(
         async (e: React.FormEvent) => {
@@ -60,6 +84,18 @@ export default function CreatePage() {
 
             if (!puzzleGame) {
                 setError('Puzzle game contract not available')
+                setIsSubmitting(false)
+                return
+            }
+
+            if (!kibiToken) {
+                setError('Kibi token contract not available')
+                setIsSubmitting(false)
+                return
+            }
+
+            if (!question || !solution || !difficulty || bountyAmount <= 0) {
+                setError('Please fill in all required fields')
                 setIsSubmitting(false)
                 return
             }
@@ -81,16 +117,15 @@ export default function CreatePage() {
                 ])
 
                 const difficultyLevel = new CairoCustomEnum({
-                    [difficulty.charAt(0).toUpperCase() + difficulty.slice(1)]: {},
+                    [difficulty]: {},
                 })
+                console.log(difficultyLevel)
                 const tx = await puzzleGame.create_puzzle(
                     puzzleId,
                     BigInt(solutionHash),
                     difficultyLevel,
                     BigInt(bountyAmount)
                 )
-
-                await tx.wait()
 
                 await createPuzzle(
                     puzzleId,
@@ -99,7 +134,8 @@ export default function CreatePage() {
                     solutionHash,
                     salt,
                     bountyAmount,
-                    address
+                    address,
+                    difficulty
                 )
 
                 setSuccess(true)
@@ -107,7 +143,7 @@ export default function CreatePage() {
                 setHint('')
                 setBountyAmount(0)
                 setSolution('')
-                setDifficulty('')
+                setDifficulty('Easy')
             } catch (error: any) {
                 console.error('Failed to create puzzle:', error)
                 setError(error.message || 'Something went wrong. Try again, brave pirate!')
@@ -201,7 +237,15 @@ export default function CreatePage() {
                                             </label>
                                             <Select
                                                 value={difficulty}
-                                                onValueChange={setDifficulty}
+                                                onValueChange={value => {
+                                                    if (
+                                                        value === 'Easy' ||
+                                                        value === 'Medium' ||
+                                                        value === 'Hard'
+                                                    ) {
+                                                        setDifficulty(value)
+                                                    }
+                                                }}
                                                 required
                                                 disabled={isSubmitting}
                                             >
@@ -209,13 +253,13 @@ export default function CreatePage() {
                                                     <SelectValue placeholder="Select difficulty" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="easy">
+                                                    <SelectItem value="Easy">
                                                         🟢 Easy — 3000 $KIBI+
                                                     </SelectItem>
-                                                    <SelectItem value="medium">
+                                                    <SelectItem value="Medium">
                                                         🟡 Medium — 5000 $KIBI+
                                                     </SelectItem>
-                                                    <SelectItem value="hard">
+                                                    <SelectItem value="Hard">
                                                         🔴 Hard — 7000 $KIBI+
                                                     </SelectItem>
                                                 </SelectContent>
@@ -265,20 +309,37 @@ export default function CreatePage() {
                                         />
                                     </div>
 
-                                    <Button
-                                        type="submit"
-                                        className="h-16 w-full bg-gradient-to-r from-green-500 to-blue-500 text-lg font-bold text-white shadow-lg hover:from-green-600 hover:to-blue-600"
-                                        disabled={
-                                            isSubmitting ||
-                                            !question ||
-                                            !solution ||
-                                            !difficulty ||
-                                            !bountyAmount ||
-                                            !validateBountyAmount()
-                                        }
-                                    >
-                                        {isSubmitting ? 'Publishing...' : 'Launch Your Puzzle 🍡'}
-                                    </Button>
+                                    {!isApproved ? (
+                                        <Button
+                                            onClick={handleApprove}
+                                            disabled={
+                                                isSubmitting ||
+                                                !question ||
+                                                !solution ||
+                                                !difficulty ||
+                                                !bountyAmount ||
+                                                !validateBountyAmount()
+                                            }
+                                            className="w-full rounded bg-yellow-500 p-2 text-white"
+                                        >
+                                            {isSubmitting ? 'Approving...' : 'Approve $KIBI'}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={handleCreatePuzzle}
+                                            disabled={
+                                                isSubmitting ||
+                                                !question ||
+                                                !solution ||
+                                                !difficulty ||
+                                                !bountyAmount ||
+                                                !validateBountyAmount()
+                                            }
+                                            className="w-full rounded bg-green-600 p-2 text-white"
+                                        >
+                                            {isSubmitting ? 'Creating Puzzle...' : 'Create Puzzle'}
+                                        </Button>
+                                    )}
                                 </form>
                             </CardContent>
                         </Card>

@@ -1,6 +1,6 @@
 'use client'
 
-export function Failure() {
+export function Failure({ hint, onClose }: { hint: string; onClose: () => void }) {
     return (
         <div className="backdrop-minimal fixed inset-0 z-50 flex items-center justify-center">
             <div className="minimal-card shadow-medium mx-4 max-w-sm rounded-lg border-error bg-white p-8 text-center">
@@ -11,16 +11,21 @@ export function Failure() {
                 <h3 className="text-heading mb-2 text-lg">Not Quite</h3>
                 <p className="text-body mb-4 text-sm">That's not the right answer. Try again!</p>
 
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div className="mb-2 flex items-center justify-center space-x-3">
                         <span className="text-lg">🤔</span>
                         <span className="text-gray-400">→</span>
                         <span className="text-lg">💡</span>
                     </div>
-                    <p className="text-caption text-sm">
-                        Hint: Think about the first cryptocurrency ever created...
-                    </p>
+                    <p className="text-caption text-sm">{hint}</p>
                 </div>
+
+                <button
+                    onClick={onClose}
+                    className="bg-success mt-2 px-4 py-2 text-sm text-white hover:bg-success-dark rounded transition-colors"
+                >
+                    Close
+                </button>
             </div>
         </div>
     )

@@ -13,6 +13,7 @@ import { useScaffoldContract } from '~~/hooks/scaffold-stark/useScaffoldContract
 import { getASinglePuzzle, markPuzzleSolved } from '~~/lib/api'
 import { cairo } from 'starknet'
 import { useEffectOnce } from 'react-use'
+import { useParams } from 'next/navigation'
 
 interface Puzzle {
     puzzleId: string
@@ -21,6 +22,7 @@ interface Puzzle {
     solutionHash: string
     hint: string
     solved?: boolean
+    rewardAmount: number
 }
 
 export default function PuzzleDetailPage() {
@@ -33,16 +35,18 @@ export default function PuzzleDetailPage() {
 
     const { address } = useAccount()
     const { data: puzzleGame } = useScaffoldContract({ contractName: 'PuzzleGame' })
-    const router = useRouter()
-    const searchParams = useSearchParams()
-    const puzzleId = searchParams.get('id')
+
+    const params = useParams()
+    const puzzleId = params?.puzzleId as string
 
     useEffectOnce(() => {
         const fetchPuzzle = async () => {
+            console.log('Fetching puzzle with ID:', puzzleId)
             if (!puzzleId) return
             try {
-                const p = await getASinglePuzzle(puzzleId)
-                setPuzzle(p)
+                const puzzle = await getASinglePuzzle(puzzleId)
+                console.log('Fetched puzzle:', puzzle)
+                setPuzzle(puzzle)
             } catch (err) {
                 console.error('Error loading puzzle:', err)
             } finally {
@@ -104,7 +108,7 @@ export default function PuzzleDetailPage() {
 
                         {puzzle.solved ? (
                             <div className="mt-6 text-center font-semibold text-green-600">
-                                ✅ You've already solved this puzzle!
+                                ✅ Puzzle already solved!
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="space-y-4">
@@ -147,8 +151,16 @@ export default function PuzzleDetailPage() {
                 </Card>
             </div>
 
-            {showSuccess && <Success text="Nice work! You solved the puzzle." earning={1000} />}
-            {showFailure && <Failure />}
+            {showSuccess && (
+                <Success
+                    text="Great job! You solved today's puzzle."
+                    earning={1000}
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
+            {showFailure && (
+                <Failure hint={puzzle?.hint || ''} onClose={() => setShowFailure(false)} />
+            )}
         </div>
     )
 }

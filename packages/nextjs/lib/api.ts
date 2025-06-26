@@ -122,7 +122,7 @@ export const generateAIPuzzle = async (address: string) => {
 
 export const getPuzzle = async (puzzleId: string) => {
     try {
-        const res = await fetch(`/api/puzzle/${puzzleId}`)
+        const res = await fetch(`/api/puzzles/${puzzleId}`)
         if (!res.ok) throw new Error('Failed to fetch puzzle')
         const resJson = await res.json()
         return resJson.puzzle || null
@@ -139,15 +139,25 @@ export const createPuzzle = async (
     solutionHash: string,
     salt: string,
     rewardAmount: number,
-    creator: string
+    creator: string,
+    difficulty: 'Easy' | 'Medium' | 'Hard' = 'Easy'
 ) => {
     try {
-        const res = await fetch('/api/puzzle', {
+        const res = await fetch('/api/puzzles', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ puzzleId, question, hint, solutionHash, rewardAmount, creator }),
+            body: JSON.stringify({
+                puzzleId,
+                question,
+                hint,
+                solutionHash,
+                rewardAmount,
+                creator,
+                salt,
+                difficulty,
+            }),
         })
 
         if (!res.ok) {
@@ -164,7 +174,7 @@ export const createPuzzle = async (
 
 export const updatePuzzle = async (puzzleId: string, solver: string, solved: boolean) => {
     try {
-        const res = await fetch('/api/puzzle', {
+        const res = await fetch('/api/puzzles', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -186,7 +196,7 @@ export const updatePuzzle = async (puzzleId: string, solver: string, solved: boo
 
 export const getAllPuzzles = async () => {
     try {
-        const res = await fetch('/api/puzzle/')
+        const res = await fetch('/api/puzzles/')
         if (!res.ok) throw new Error('Failed to fetch puzzles')
         const resJson = await res.json()
         return resJson.puzzles || []
@@ -198,7 +208,7 @@ export const getAllPuzzles = async () => {
 
 export const getASinglePuzzle = async (puzzleId: string) => {
     try {
-        const res = await fetch(`/api/puzzle/${puzzleId}`)
+        const res = await fetch(`/api/puzzles/${puzzleId}`)
         if (!res.ok) throw new Error('Failed to fetch puzzle')
         const resJson = await res.json()
         return resJson.puzzle || null
@@ -208,14 +218,15 @@ export const getASinglePuzzle = async (puzzleId: string) => {
     }
 }
 
-export const markPuzzleSolved = async (address: string, puzzleId: string) => {
+export const markPuzzleSolved = async (solver: string, puzzleId: string) => {
+    console.log('markPuzzleSolved called with:', { solver, puzzleId })
     try {
-        const res = await fetch('/api/puzzle/${puzzleId}', {
-            method: 'POST',
+        const res = await fetch(`/api/puzzles/${puzzleId}`, {
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ address, puzzleId }),
+            body: JSON.stringify({ solver, puzzleId }),
         })
 
         if (!res.ok) {

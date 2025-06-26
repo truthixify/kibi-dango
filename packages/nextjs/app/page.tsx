@@ -81,8 +81,6 @@ export default function DailyPuzzlePage() {
             console.error('Failed to create daily puzzle:', error)
         } finally {
             setIsCreatingPuzzle(false)
-            setShowSuccess(false)
-            setShowFailure(false)
         }
     }
 
@@ -90,9 +88,6 @@ export default function DailyPuzzlePage() {
         e.preventDefault()
 
         if (!solution || !address || !dailyPuzzle) return
-        console.log(dailyPuzzle.puzzleId, solution)
-        console.log(cairo.felt(solution.toLowerCase()))
-
         setIsSubmittingSolution(true)
 
         try {
@@ -111,6 +106,7 @@ export default function DailyPuzzlePage() {
             }
             console.log('Transaction submitted:', tx)
         } catch (error) {
+            setShowFailure(true)
             console.error('Failed to submit puzzle solution:', error)
         } finally {
             setIsSubmittingSolution(false)
@@ -131,8 +127,6 @@ export default function DailyPuzzlePage() {
                 }
             } catch (error) {
                 console.error('Failed to fetch daily puzzle:', error)
-                setIsSubmitting(false)
-                setIsLoadingPuzzle(false)
             } finally {
                 setIsSubmitting(false)
                 setIsLoadingPuzzle(false)
@@ -154,7 +148,6 @@ export default function DailyPuzzlePage() {
                     <p className="text-body">Solve today's challenge and earn tokens</p>
                 </div>
 
-                {/* Generate Puzzle Button — only if not generated */}
                 {!dailyPuzzle && (
                     <div className="mb-6 text-center">
                         <Button
@@ -167,7 +160,6 @@ export default function DailyPuzzlePage() {
                     </div>
                 )}
 
-                {/* Puzzle Card */}
                 {dailyPuzzle && (
                     <Card className="minimal-card hover-lift mb-8">
                         <CardHeader className="border-b border-gray-200 bg-gray-50">
@@ -254,8 +246,16 @@ export default function DailyPuzzlePage() {
                     description="Please wait while your daily puzzle is loading"
                 />
             )}
-            {showSuccess && <Success text="Great job! You solved today's puzzle." earning={1000} />}
-            {showFailure && <Failure />}
+            {showSuccess && (
+                <Success
+                    text="Great job! You solved today's puzzle."
+                    earning={1000}
+                    onClose={() => setShowSuccess(false)}
+                />
+            )}
+            {showFailure && (
+                <Failure hint={dailyPuzzle?.hint || ''} onClose={() => setShowFailure(false)} />
+            )}
         </div>
     )
 }

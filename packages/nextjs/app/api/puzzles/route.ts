@@ -1,5 +1,6 @@
 import { connectDB } from '~~/lib/mongo-db'
 import Puzzle from './model'
+import User from '../user/model'
 
 export async function GET() {
     try {
@@ -17,7 +18,8 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         await connectDB()
-        const { question, hint, solutionHash, rewardAmount, creator, puzzleId, salt } =
+
+        const { question, hint, solutionHash, rewardAmount, creator, puzzleId, salt, difficulty } =
             await req.json()
 
         if (
@@ -27,7 +29,8 @@ export async function POST(req: Request) {
             !rewardAmount ||
             !creator ||
             !puzzleId ||
-            !salt
+            !salt ||
+            (difficulty && !['Easy', 'Medium', 'Hard'].includes(difficulty))
         ) {
             return Response.json({ error: 'All fields are required' }, { status: 400 })
         }
@@ -36,15 +39,23 @@ export async function POST(req: Request) {
             return Response.json({ error: 'Reward amount must be greater than 0' }, { status: 400 })
         }
 
+        const user = await User.findOne({ address: creator.toLowerCase() })
+
+        if (!user) {
+            return Response.json({ error: 'User not found with this address' }, { status: 404 })
+        }
+
         const puzzle = new Puzzle({
             hint,
             solutionHash,
             rewardAmount,
-            creator,
+            creator: user.username,
             puzzleId,
             question,
             salt,
+            difficulty: difficulty || 'Easy',
         })
+
         await puzzle.save()
 
         return Response.json({ success: true, puzzle })

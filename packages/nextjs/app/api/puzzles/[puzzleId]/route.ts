@@ -1,11 +1,12 @@
 import { connectDB } from '~~/lib/mongo-db'
 import Puzzle from '../model'
+import User from '../../user/model'
+import { console } from 'inspector'
 
-export async function GET(req: Request) {
+export async function GET(req: Request, { params }: { params: { puzzleId: string } }) {
     try {
         await connectDB()
-        const { searchParams } = new URL(req.url)
-        const puzzleId = searchParams.get('puzzleId')
+        const { puzzleId } = await params
 
         if (!puzzleId) {
             return Response.json({ error: 'Puzzle ID is required' }, { status: 400 })
@@ -29,18 +30,26 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
     try {
         await connectDB()
-        const { puzzleId, solver, solved } = await req.json()
+        const { puzzleId, solver } = await req.json()
 
-        if (!puzzleId || !solver || typeof solved !== 'boolean') {
+        console.log('PUT request received with data:', { puzzleId, solver })
+
+        if (!puzzleId || !solver) {
             return Response.json(
                 { error: 'Puzzle ID, solver, and solved status are required' },
                 { status: 400 }
             )
         }
 
+        const user = await User.findOne({ address: solver.toLowerCase() })
+
+        if (!user) {
+            return Response.json({ error: 'User not found with this address' }, { status: 404 })
+        }
+
         const updatedPuzzle = await Puzzle.findOneAndUpdate(
             { puzzleId },
-            { $set: { solver, solved } },
+            { $set: { solver: user.username, solved: true } },
             { new: true }
         )
 

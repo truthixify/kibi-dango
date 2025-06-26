@@ -6,6 +6,7 @@ import { Badge } from '~~/components/ui/badge'
 import { Trophy, Medal, Award } from 'lucide-react'
 import { useScaffoldContract } from '~~/hooks/scaffold-stark/useScaffoldContract'
 import { getAllUsers } from '~~/lib/api'
+import { Failure } from '~~/components/failure'
 
 const ranks = {
     TamedBeast: { name: 'Tamed Beast', minSolves: 0, color: 'bg-gray-400 text-gray-900' },

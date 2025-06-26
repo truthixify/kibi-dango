@@ -58,7 +58,8 @@ export async function GET(req: Request) {
 
         let parsed
         try {
-            parsed = JSON.parse(jsonResponse)
+            const json = JSON.parse(jsonResponse)
+            parsed = Array.isArray(json) ? json[0] : json
         } catch {
             throw new Error('Malformed AI response (invalid JSON)')
         }

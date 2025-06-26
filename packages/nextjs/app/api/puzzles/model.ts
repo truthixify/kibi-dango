@@ -8,8 +8,7 @@ const puzzleSchema = new Schema(
             unique: true,
         },
         creator: {
-            type: Schema.Types.ObjectId,
-            ref: 'User',
+            type: String,
             required: true,
         },
         question: {
@@ -41,9 +40,13 @@ const puzzleSchema = new Schema(
             default: false,
         },
         solver: {
-            type: Schema.Types.ObjectId,
-            ref: 'User',
+            type: String,
             default: null,
+        },
+        difficulty: {
+            type: String,
+            enum: ['Easy', 'Medium', 'Hard'],
+            default: 'Easy',
         },
     },
     { timestamps: true }
