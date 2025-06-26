@@ -31,6 +31,10 @@ const dailyPuzzleSchema = new Schema(
             type: String,
             required: true,
         },
+        solved: {
+            type: Boolean,
+            default: false,
+        },
     },
     { timestamps: true }
 )

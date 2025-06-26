@@ -1,8 +1,7 @@
 'use client'
 
 import type React from 'react'
-
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Button } from '~~/components/ui/button'
 import { Input } from '~~/components/ui/input'
 import { Textarea } from '~~/components/ui/textarea'
@@ -16,19 +15,117 @@ import {
 } from '~~/components/ui/select'
 import { Badge } from '~~/components/ui/badge'
 import { PlusCircle, Lightbulb, Gift } from 'lucide-react'
+import { useScaffoldContract } from '~~/hooks/scaffold-stark/useScaffoldContract'
+import { createPuzzle } from '~~/lib/api'
+import { useAccount } from '~~/hooks/useAccount'
+import { cairo, CairoCustomEnum, hash, stark } from 'starknet'
 
 export default function CreatePage() {
-    const [puzzleText, setPuzzleText] = useState('')
-    const [answer, setAnswer] = useState('')
-    const [difficulty, setDifficulty] = useState('')
-    const [reward, setReward] = useState('')
+    const [question, setQuestion] = useState('')
     const [hint, setHint] = useState('')
+    const [bountyAmount, setBountyAmount] = useState(0)
+    const [solution, setSolution] = useState('')
+    const [difficulty, setDifficulty] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState(false)
+    const { data: puzzleGame } = useScaffoldContract({ contractName: 'PuzzleGame' })
+    const { address } = useAccount()
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        // Handle puzzle submission
-        console.log({ puzzleText, answer, difficulty, reward, hint })
+    const MIN_BOUNTY_AMOUNT = {
+        easy: 3000,
+        medium: 5000,
+        hard: 7000,
+        expert: 7000,
     }
+
+    const validateBountyAmount = useCallback(() => {
+        if (!difficulty) return true
+        const minBounty = MIN_BOUNTY_AMOUNT[difficulty as keyof typeof MIN_BOUNTY_AMOUNT]
+        return bountyAmount >= minBounty
+    }, [bountyAmount, difficulty])
+
+    const handleCreatePuzzle = useCallback(
+        async (e: React.FormEvent) => {
+            e.preventDefault()
+            setError(null)
+            setSuccess(false)
+            setIsSubmitting(true)
+
+            if (!address) {
+                setError('Please connect your wallet to create a puzzle')
+                setIsSubmitting(false)
+                return
+            }
+
+            if (!puzzleGame) {
+                setError('Puzzle game contract not available')
+                setIsSubmitting(false)
+                return
+            }
+
+            if (!validateBountyAmount()) {
+                setError(
+                    `Bounty amount must be at least ${MIN_BOUNTY_AMOUNT[difficulty as keyof typeof MIN_BOUNTY_AMOUNT]} $KIBI for ${difficulty} puzzles`
+                )
+                setIsSubmitting(false)
+                return
+            }
+
+            try {
+                const salt = cairo.felt(stark.randomAddress())
+                const puzzleId = cairo.felt(stark.randomAddress())
+                const solutionHash = hash.computePoseidonHashOnElements([
+                    cairo.felt(solution.toLowerCase()),
+                    cairo.felt(salt),
+                ])
+
+                const difficultyLevel = new CairoCustomEnum({
+                    [difficulty.charAt(0).toUpperCase() + difficulty.slice(1)]: {},
+                })
+                const tx = await puzzleGame.create_puzzle(
+                    puzzleId,
+                    BigInt(solutionHash),
+                    difficultyLevel,
+                    BigInt(bountyAmount)
+                )
+
+                await tx.wait()
+
+                const newPuzzle = await createPuzzle(
+                    puzzleId,
+                    question,
+                    hint,
+                    solutionHash,
+                    salt,
+                    bountyAmount,
+                    address
+                )
+
+                setSuccess(true)
+                setQuestion('')
+                setHint('')
+                setBountyAmount(0)
+                setSolution('')
+                setDifficulty('')
+            } catch (error: any) {
+                console.error('Failed to create puzzle:', error)
+                setError(error.message || 'Failed to create puzzle. Please try again.')
+            } finally {
+                setIsSubmitting(false)
+            }
+        },
+        [
+            address,
+            puzzleGame,
+            question,
+            hint,
+            bountyAmount,
+            solution,
+            difficulty,
+            validateBountyAmount,
+        ]
+    )
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -59,37 +156,46 @@ export default function CreatePage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-8">
-                                <form onSubmit={handleSubmit} className="space-y-6">
+                                {/* {error && (
+                                    <div className="mb-4 rounded-lg bg-red-100 p-3 text-red-700">
+                                        {error}
+                                    </div>
+                                )} */}
+                                {success && (
+                                    <div className="mb-4 rounded-lg bg-green-100 p-3 text-green-700">
+                                        Puzzle created successfully!
+                                    </div>
+                                )}
+                                <form onSubmit={handleCreatePuzzle} className="space-y-6">
                                     <div>
                                         <label className="mb-2 block text-lg font-medium text-gray-700">
                                             Puzzle Question
                                         </label>
                                         <Textarea
-                                            value={puzzleText}
-                                            onChange={e => setPuzzleText(e.target.value)}
+                                            value={question}
+                                            onChange={e => setQuestion(e.target.value)}
                                             placeholder="Write your puzzle riddle here... Make it challenging but fair!"
                                             className="min-h-32 border-2 border-green-200 text-gray-800 focus:border-green-400"
                                             required
+                                            disabled={isSubmitting}
                                         />
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div>
                                             <label className="mb-2 block text-lg font-medium text-gray-700">
-                                                Answer (Single Letter)
+                                                Solution (Single Word)
                                             </label>
                                             <Input
                                                 type="text"
-                                                value={answer}
+                                                value={solution}
                                                 onChange={e =>
-                                                    setAnswer(
-                                                        e.target.value.slice(0, 1).toUpperCase()
-                                                    )
+                                                    setSolution(e.target.value.toLowerCase())
                                                 }
-                                                placeholder="A"
-                                                className="h-16 border-2 border-green-200 text-center text-2xl font-bold text-gray-800 focus:border-green-400"
-                                                maxLength={1}
+                                                placeholder="STARKNET"
+                                                className="h-16 border-2 border-green-200 text-center text-gray-800 focus:border-green-400"
                                                 required
+                                                disabled={isSubmitting}
                                             />
                                         </div>
 
@@ -101,22 +207,20 @@ export default function CreatePage() {
                                                 value={difficulty}
                                                 onValueChange={setDifficulty}
                                                 required
+                                                disabled={isSubmitting}
                                             >
                                                 <SelectTrigger className="h-16 border-2 border-green-200 text-lg focus:border-green-400">
                                                     <SelectValue placeholder="Select difficulty" />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="easy">
-                                                        🟢 Easy (10 $KIBI)
+                                                        🟢 Easy ({'>'}= 3000 $KIBI)
                                                     </SelectItem>
                                                     <SelectItem value="medium">
-                                                        🟡 Medium (25 $KIBI)
+                                                        🟡 Medium ({'>'}= 5000 $KIBI)
                                                     </SelectItem>
                                                     <SelectItem value="hard">
-                                                        🔴 Hard (50 $KIBI)
-                                                    </SelectItem>
-                                                    <SelectItem value="expert">
-                                                        ⚫ Expert (100 $KIBI)
+                                                        🔴 Hard ({'>'}= 7000 $KIBI)
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -133,35 +237,45 @@ export default function CreatePage() {
                                             onChange={e => setHint(e.target.value)}
                                             placeholder="Give pirates a helpful hint..."
                                             className="border-2 border-green-200 text-gray-800 focus:border-green-400"
+                                            disabled={isSubmitting}
                                         />
                                     </div>
 
                                     <div>
                                         <label className="mb-2 block text-lg font-medium text-gray-700">
-                                            Creator Reward
+                                            Solver Reward
                                         </label>
-                                        <Select value={reward} onValueChange={setReward} required>
-                                            <SelectTrigger className="border-2 border-green-200 focus:border-green-400">
-                                                <SelectValue placeholder="Select your reward" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="5">5 $KIBI per solve</SelectItem>
-                                                <SelectItem value="10">
-                                                    10 $KIBI per solve
-                                                </SelectItem>
-                                                <SelectItem value="15">
-                                                    15 $KIBI per solve
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Input
+                                            type="number"
+                                            value={bountyAmount}
+                                            onChange={e => setBountyAmount(Number(e.target.value))}
+                                            placeholder={`Enter reward in $KIBI (min ${difficulty ? MIN_BOUNTY_AMOUNT[difficulty as keyof typeof MIN_BOUNTY_AMOUNT] : 3000})`}
+                                            className="h-16 w-full rounded-lg border-2 border-green-200 text-center text-gray-800 focus:border-green-400"
+                                            required
+                                            min={
+                                                difficulty
+                                                    ? MIN_BOUNTY_AMOUNT[
+                                                          difficulty as keyof typeof MIN_BOUNTY_AMOUNT
+                                                      ]
+                                                    : 3000
+                                            }
+                                            disabled={isSubmitting}
+                                        />
                                     </div>
 
                                     <Button
                                         type="submit"
                                         className="h-16 w-full bg-gradient-to-r from-green-500 to-blue-500 text-lg font-bold text-white shadow-lg hover:from-green-600 hover:to-blue-600"
-                                        disabled={!puzzleText || !answer || !difficulty || !reward}
+                                        disabled={
+                                            isSubmitting ||
+                                            !question ||
+                                            !solution ||
+                                            !difficulty ||
+                                            !bountyAmount ||
+                                            !validateBountyAmount()
+                                        }
                                     >
-                                        Publish Puzzle 🚀
+                                        {isSubmitting ? 'Publishing...' : 'Publish Puzzle 🚀'}
                                     </Button>
                                 </form>
                             </CardContent>
@@ -218,7 +332,7 @@ export default function CreatePage() {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-xl text-yellow-800">
                                     <Gift className="h-5 w-5" />
-                                    Creator Rewards
+                                    Solver Rewards
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -226,62 +340,26 @@ export default function CreatePage() {
                                     <div className="flex items-center justify-between rounded border border-yellow-200 bg-white p-2">
                                         <span className="text-sm font-medium">Easy Puzzle</span>
                                         <Badge className="bg-green-400 text-green-900">
-                                            5 $KIBI/solve
+                                            Minimum of 3000 $KIBI/solve
                                         </Badge>
                                     </div>
                                     <div className="flex items-center justify-between rounded border border-yellow-200 bg-white p-2">
                                         <span className="text-sm font-medium">Medium Puzzle</span>
                                         <Badge className="bg-yellow-400 text-yellow-900">
-                                            10 $KIBI/solve
+                                            Minimum of 5000 $KIBI/solve
                                         </Badge>
                                     </div>
                                     <div className="flex items-center justify-between rounded border border-yellow-200 bg-white p-2">
                                         <span className="text-sm font-medium">Hard Puzzle</span>
                                         <Badge className="bg-orange-400 text-orange-900">
-                                            15 $KIBI/solve
-                                        </Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded border border-yellow-200 bg-white p-2">
-                                        <span className="text-sm font-medium">Expert Puzzle</span>
-                                        <Badge className="bg-red-400 text-red-900">
-                                            20 $KIBI/solve
+                                            Minimum of 7000 $KIBI/solve
                                         </Badge>
                                     </div>
                                 </div>
                                 <p className="mt-3 text-xs text-gray-600">
-                                    You earn rewards every time someone solves your puzzle!
+                                    You have the freedom to set your own rewards, but make sure they
+                                    are fair and enticing for pirates to solve your puzzles!
                                 </p>
-                            </CardContent>
-                        </Card>
-
-                        {/* Recent Puzzles */}
-                        <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                            <CardHeader>
-                                <CardTitle className="text-xl text-blue-800">
-                                    Your Recent Puzzles
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-2">
-                                    <div className="rounded border border-blue-200 bg-white p-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium">
-                                                Crypto Origins
-                                            </span>
-                                            <Badge variant="secondary">12 solves</Badge>
-                                        </div>
-                                        <p className="text-xs text-gray-600">+60 $KIBI earned</p>
-                                    </div>
-                                    <div className="rounded border border-blue-200 bg-white p-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium">
-                                                Blockchain Basics
-                                            </span>
-                                            <Badge variant="secondary">8 solves</Badge>
-                                        </div>
-                                        <p className="text-xs text-gray-600">+40 $KIBI earned</p>
-                                    </div>
-                                </div>
                             </CardContent>
                         </Card>
                     </div>

@@ -17,9 +17,18 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         await connectDB()
-        const { hint, solutionHash, rewardAmount, creator, puzzleId } = await req.json()
+        const { question, hint, solutionHash, rewardAmount, creator, puzzleId, salt } =
+            await req.json()
 
-        if (!hint || !solutionHash || !rewardAmount || !creator || !puzzleId) {
+        if (
+            !question ||
+            !hint ||
+            !solutionHash ||
+            !rewardAmount ||
+            !creator ||
+            !puzzleId ||
+            !salt
+        ) {
             return Response.json({ error: 'All fields are required' }, { status: 400 })
         }
 
@@ -33,6 +42,8 @@ export async function POST(req: Request) {
             rewardAmount,
             creator,
             puzzleId,
+            question,
+            salt,
         })
         await puzzle.save()
 
@@ -45,10 +56,25 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
     try {
         await connectDB()
-        const { puzzleId, hint } = await req.json()
 
-        const puzzle = await Puzzle.findOneAndUpdate({ puzzleId }, { hint }, { new: true })
-        if (!puzzle) return Response.json({ error: 'Puzzle not found' }, { status: 404 })
+        const { puzzleId, solver, solved } = await req.json()
+
+        if (!puzzleId || typeof solved !== 'boolean' || !solver) {
+            return Response.json(
+                { error: 'puzzleId, solver, and solved status are required' },
+                { status: 400 }
+            )
+        }
+
+        const puzzle = await Puzzle.findOneAndUpdate(
+            { puzzleId },
+            { $set: { solved, solver } },
+            { new: true }
+        )
+
+        if (!puzzle) {
+            return Response.json({ error: 'Puzzle not found' }, { status: 404 })
+        }
 
         return Response.json({ success: true, puzzle })
     } catch (err) {

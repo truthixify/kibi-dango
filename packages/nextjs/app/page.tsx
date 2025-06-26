@@ -10,12 +10,15 @@ import { MinimalSuccess } from '~~/components/minimal-success'
 import { MinimalFailure } from '~~/components/minimal-failure'
 import { useAccount } from '~~/hooks/useAccount'
 import { RegistrationModal } from '~~/components/registration-modal'
-import { createAIDailyPuzzle, generateAIPuzzle, getAIDailyPuzzle, getUserByAddress } from '~~/lib/api'
+import {
+    createAIDailyPuzzle,
+    generateAIPuzzle,
+    getAIDailyPuzzle,
+    getUserByAddress,
+    updateAIDailyPuzzle,
+} from '~~/lib/api'
 import { useScaffoldContract } from '~~/hooks/scaffold-stark/useScaffoldContract'
-import { CairoCustomEnum, shortString, cairo } from 'starknet'
-import { generateCryptoPuzzle } from '~~/lib/generate-puzzle'
-import { useScaffoldEventHistory } from '~~/hooks/scaffold-stark/useScaffoldEventHistory'
-import { useBlockNumber, useProvider } from '@starknet-react/core'
+import { CairoCustomEnum, cairo, stark } from 'starknet'
 
 interface DailyPuzzle {
     puzzleId: string
@@ -23,6 +26,7 @@ interface DailyPuzzle {
     salt: string
     solutionHash: string
     hint: string
+    solved?: boolean
 }
 
 export default function PuzzlePage() {
@@ -33,49 +37,37 @@ export default function PuzzlePage() {
     const [dailyPuzzle, setDailyPuzzle] = useState<DailyPuzzle | null>(null)
     const [solutionHash, setSolutionHash] = useState<string | null>(null)
     const [solution, setSolution] = useState<string>('')
-    const { address, isConnected, account } = useAccount()
-    const { data: blockNumber } = useBlockNumber()
-    const { provider } = useProvider()
+    const [isCreatingPuzzle, setIsCreatingPuzzle] = useState(false)
+    const [isSubmittingSolution, setIsSubmittingSolution] = useState(false)
+    const { address, isConnected } = useAccount()
     const { data: puzzleGame } = useScaffoldContract({ contractName: 'PuzzleGame' })
-    const { data: PuzzleCreatedEvent } = useScaffoldEventHistory({
-        contractName: 'PuzzleGame',
-        eventName: 'contracts::events::puzzle_game_events::PuzzleCreated',
-        fromBlock: blockNumber ? BigInt(blockNumber) : 0n,
-        watch: true,
-        filters: {
-            solution_commitment: solutionHash,
-        },
-    })
 
     const handleCreateDailyPuzzle = async () => {
-        setIsSubmitting(true)
+        setIsCreatingPuzzle(true)
         if (!address || dailyPuzzle) return
 
         try {
-            // Generate a new puzzle using the AI service
             const puzzle = await generateAIPuzzle(address)
             setSolutionHash(puzzle?.solutionHash)
+            const puzzleId = cairo.felt(stark.randomAddress())
 
             const difficulty_level = new CairoCustomEnum({ AI: {} })
-            // Create the puzzle on-chain
             const tx = await puzzleGame?.create_puzzle(
+                puzzleId,
                 BigInt(puzzle?.solutionHash),
                 difficulty_level,
-                BigInt(1000),
+                BigInt(1000)
             )
-            // Get puzzle ID from the transaction event
-            const puzzleId = PuzzleCreatedEvent[0].parsedArgs.puzzle_id.toString();
 
-            // Put the puzzle data into the database
             const newPuzzle = await createAIDailyPuzzle(
                 puzzleId,
                 puzzle?.question,
                 puzzle?.salt,
                 puzzle?.hint,
                 puzzle?.solutionHash,
-                address,
+                address
             )
-            // Set the daily puzzle state with the new puzzle data
+
             const dailyPuzzleData: DailyPuzzle = {
                 puzzleId: newPuzzle.puzzleId,
                 question: newPuzzle.question,
@@ -85,46 +77,45 @@ export default function PuzzlePage() {
             }
 
             setDailyPuzzle(dailyPuzzleData)
-            setIsSubmitting(false)
             setShowSuccess(true)
         } catch (error) {
-            setIsSubmitting(false)
             setShowFailure(true)
-
-            console.error('Failed to fetch daily puzzle:', error)
+            console.error('Failed to create daily puzzle:', error)
         } finally {
+            setIsCreatingPuzzle(false)
             setShowSuccess(false)
-            setShowFailure(false)   
+            setShowFailure(false)
         }
-
     }
 
-    const handleSubmitDailyPuzzle = async (e: any) => {
+    const handleSubmitDailyPuzzle = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!solution) {
-            // setShowFailure(true)
-            return
-        }
-
-        // setIsSubmitting(true)
-        if (!address || !dailyPuzzle) return
-        console.log(dailyPuzzle, solution)
+        if (!solution || !address || !dailyPuzzle) return
+        console.log(dailyPuzzle.puzzleId, solution)
         console.log(cairo.felt(solution.toLowerCase()))
 
+        setIsSubmittingSolution(true)
+
         try {
-            // Submit the puzzle on-chain
             const tx = await puzzleGame?.submit_solution(
-                2,
-                // BigInt(dailyPuzzle?.puzzleId),
+                BigInt(dailyPuzzle?.puzzleId),
                 cairo.felt(solution.toLowerCase()),
-                BigInt(dailyPuzzle?.salt),
+                BigInt(dailyPuzzle?.salt)
             )
+
+            if (tx) {
+                const updatedPuzzle = await updateAIDailyPuzzle(address)
+                if (updatedPuzzle) {
+                    setDailyPuzzle(updatedPuzzle)
+                    setShowSuccess(true)
+                }
+            }
             console.log('Transaction submitted:', tx)
-            
         } catch (error) {
-            console.error('Failed to fetch submit puzzle:', error)
-        } finally { 
+            console.error('Failed to submit puzzle solution:', error)
+        } finally {
+            setIsSubmittingSolution(false)
         }
     }
 
@@ -139,7 +130,12 @@ export default function PuzzlePage() {
             if (!address) return
             try {
                 const puzzle: DailyPuzzle = await getAIDailyPuzzle(address)
-                if (puzzle) setDailyPuzzle(puzzle)
+                if (puzzle) {
+                    setDailyPuzzle({
+                        ...puzzle,
+                        solved: puzzle.solved ?? false,
+                    })
+                }
             } catch (error) {
                 console.error('Failed to fetch daily puzzle:', error)
                 setIsSubmitting(false)
@@ -203,29 +199,34 @@ export default function PuzzlePage() {
                                 <p className="text-body leading-relaxed">{dailyPuzzle.question}</p>
                             </div>
 
-                            <form onSubmit={(e) => handleSubmitDailyPuzzle(e)} className="space-y-4">
-                                <div>
-                                    <label className="text-subheading mb-2 block text-sm font-medium">
-                                        Your Solution:
-                                    </label>
-                                    <div className="flex gap-3">
-                                        <Input
-                                            type="text"
-                                            value={solution}
-                                            onChange={e => setSolution(e.target.value.trim())}
-                                            placeholder="Enter solution..."
-                                            className="minimal-input focus-minimal h-12 text-center text-xl font-semibold"
-                                        />
-                                        <Button
-                                            type="submit"
-                                            // disabled={!answer || isSubmitting}
-                                            className="minimal-button minimal-button-primary h-12 px-6 font-medium"
-                                        >
-                                            {isSubmitting ? 'Checking...' : 'Submit'}
-                                        </Button>
-                                    </div>
+                            {dailyPuzzle.solved ? (
+                                <div className="mt-6 text-center font-semibold text-green-600">
+                                    ✅ You've already solved today's puzzle!
                                 </div>
-                            </form>
+                            ) : (
+                                <form onSubmit={handleSubmitDailyPuzzle} className="space-y-4">
+                                    <div>
+                                        <label className="text-subheading mb-2 block text-sm font-medium">
+                                            Your Solution:
+                                        </label>
+                                        <div className="flex gap-3">
+                                            <Input
+                                                type="text"
+                                                value={solution}
+                                                onChange={e => setSolution(e.target.value.trim())}
+                                                placeholder="Enter solution..."
+                                                className="minimal-input focus-minimal h-12 text-center text-xl font-semibold"
+                                            />
+                                            <Button
+                                                type="submit"
+                                                className="minimal-button minimal-button-primary h-12 px-6 font-medium"
+                                            >
+                                                {isSubmitting ? 'Checking...' : 'Submit'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </form>
+                            )}
 
                             {/* Hint */}
                             <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -247,7 +248,7 @@ export default function PuzzlePage() {
             </div>
 
             {/* Modals */}
-            {isSubmitting && <MinimalLoader />}
+            {(isCreatingPuzzle || isSubmittingSolution) && <MinimalLoader />}
             {showSuccess && <MinimalSuccess />}
             {showFailure && <MinimalFailure />}
         </div>

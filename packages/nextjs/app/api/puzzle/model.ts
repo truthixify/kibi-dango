@@ -20,6 +20,10 @@ const puzzleSchema = new Schema(
             type: String,
             required: true,
         },
+        salt: {
+            type: String,
+            required: true,
+        },
         solutionHash: {
             type: String,
             required: true,
@@ -31,6 +35,15 @@ const puzzleSchema = new Schema(
                 validator: (v: number) => v > 0,
                 message: 'Reward amount must be greater than 0',
             },
+        },
+        solved: {
+            type: Boolean,
+            default: false,
+        },
+        solver: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
         },
     },
     { timestamps: true }
